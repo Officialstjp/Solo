@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "Solo"
+version = "0.0.1"
+description = "Solo - just another AI Assistant"
+authors = ["Stefan Ploch - stefanploch00@gmail.com]
+package-mode = false
+
+[tool.poetry.dependencies]      # - Runtime
+python = "^3.11"
+fastapi = {extras = ["standard"], version = "^0.111"}   # Web Api
+uvicorn = {extras = ["standard"], version = "^0.30"}    # ion even know
+streamlit = "^1.35"                                     # dashboard
+llama-cpp-python = {version="^0.2.70", extras=["cuda"]} # GPU LLM backend
+ctranslate2 = {version = "^4.4"}                        # faster-whisper core
+faster-whisper = "^1.0.1"                               # STT wrapper
+piper-tts = "^1.2.0"                                    # local TTS
+pvporcupine = "^3.0.0"                                  # wake-word
+chromadb = "^0.4.24"                                    # vector store
+crewai = "^0.22"                                        # multi-agent bus
+python-dotenv = "^1.0"
+structlog = "^24.1"
+pydantic = "^2.7"
+
+[tool.poetry.group.dev.dependencies]        # - DEV + CI
+black = "^24.4"
+flake8 = "^7.2"
+pytest = "^8.2"
+pre-commit = "^3.7"
+pytest-asyncio = "^0.24"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

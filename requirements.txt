@@ -1,0 +1,6 @@
+# dev:
+poetry 
+pre-commit 
+black 
+flake8 
+pytest
