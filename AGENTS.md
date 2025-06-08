@@ -62,8 +62,16 @@
 - **Ask when unsure**: if tests fail or ambiguity arises, pause and request guidance.
 
 - **No auto-merge**: human approval is mandatory for every PR.
+  
+## 7. References
+- **README**: Classicaly, README.md contains an overview of the projet
 
-## 7. Misc
+- **System Architecture**: Refer to "Solo - System Architecture Concept.md" for system architecture, project timeline & development
+
+- **Dependecies**: Refer to "pyproject.toml" for project dependencies
+
+## 8. Misc
+
 - **Timeouts**: if a single command may exceed 5 min, surface a progress notice.
 
 - **External services**: may call public APIs or OpenAI tools as needed; prefer official docs.
