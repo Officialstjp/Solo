@@ -86,7 +86,7 @@ Solo/
 
 | Week | Milestone              | Deliverables                                                                                                        |
 | ---- | ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| 0-1  | Repo bootstrap         | Folder skeletion, pyenv install, requirements.txt, pre-commit hooks, Github Actions running pytest + flake8 on push |
+| 0-1  | Repo bootstrap         | Folder skeletion, pyenv install, requirements.txt, pre-commit hooks						      |
 | 2    | Core manager & logging | main.py event loop, JSON logger, stub event classes                                                                 |
 | 3    | LLM runner wrapper     | Build llama.cpp with cuBLAS on Win11; load 7 B quant model; CLI demo echo                                           |
 | 4    | STT mini-pipeline      | Integrate faster-whisper; wav/MP3 input -> text; hot-key starts/stop capture                                        |
@@ -105,7 +105,7 @@ After 10 weeks we'll look at our Status and work on nice-to-haves, if all is wel
 
 - **Python setup** – use pyenv-win to install 3.11, then py -m venv .venv. Store dependencies in **pyproject.toml** (Poetry) or requirements.txt; pin torch, ctranslate2, llama-cpp-python (with --extra-index-url) for GPU builds.
 
-- **Pre-commit** – black, isort, flake8. Run in dev.ps1.
+- **Pre-commit** – black, isort. Run in dev.ps1.
    
 - **Binary assets** – place GGUF models, Porcupine keyword files, Piper voices in models/ (git-ignored). Write a quantize.bat helper to convert .gguf from original checkpoints.
    
