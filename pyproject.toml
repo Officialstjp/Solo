@@ -2,7 +2,7 @@
 name = "Solo"
 version = "0.0.1"
 description = "Solo - just another AI Assistant"
-authors = ["Stefan Ploch - stefanploch00@gmail.com]"
+authors = ["Stefan Ploch <stefanploch00@gmail.com>"]
 package-mode = false
 
 [tool.poetry.dependencies]      # - Runtime
