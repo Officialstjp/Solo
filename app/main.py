@@ -1,1 +1,96 @@
+"""
+Module Name: app/main.py
+Purpose   : Entry point for the Solo application.
+Params    : None
+History   :
+    Date            Notes
+    2025-06-08      Init
+
+"""
 # For later, time spent (+ plan and doc work) = ~10h | last changed 2:29 08.06.2025
+
+import asyncio
+import signal
+import sys
+from typing import Dict, List, Callable, Coroutine, Any
+
+from app.utils.logger import setup_logger
+from app.utils.events import EventBus, EventType
+from app.config import AppConfig
+
+class SoloApp:
+    """ Main application for Solo """
+
+    def __init__(self, config_path: str = None):
+        """ Initialize application """
+        self.config = AppConfig(config_path)
+
+        # Setup logger
+        self.logger = setup_logger(
+            log_level=self.config.log_level,
+            json_format=self.config.json_logs,
+            log_file=self.config.log_file
+        )
+
+        # Intitialize event bus
+        self.event_bus = EventBus()
+
+        # Store running tasks
+        self.tasks: List[asyncio.Task] = []
+
+        # Register components
+        self.components: Dict[str, Callable[[], Coroutine[Any, Any, None]]] = {}
+
+        # Signal handlers for graceful shutdown
+        self._setup_signal_handlers()
+
+        self.logger.info("Initialization complete.")
+
+    def _setup_signal_handlers(self):
+        """ Setup signal handlers for graceful shutdown """
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            signal.signal(sig, self._handle_shutdown)
+
+    def _handle_shutdown(self, signum, frame):
+        """ Handle shutdown signals """
+        self.logger.info(f"Recieved signal {signum}, initating shutdown")
+        asyncio.create_task(self.shutdown())
+
+    def register_component(self, name: str, coro_func: Callable[[], Coroutine[Any, Any, None]]):
+        """ Register a component with the application """
+        self.components[name] = coro_func
+        self.logger.info(f"Component registered: {name}")
+
+    async def start_component(self, name: str):
+        """ Start a registered component """
+        if name not in self.components:
+            self.logger.error(f"Component not found: {name}")
+            return
+
+        coro = self.components[name]()
+        task = asyncio.create_task(coro)
+        task.set_name(name)
+        self.tasks.append(task)
+        self.logger.info(f"Component started: {name}")
+
+    async def monitor_tasks(self):
+        """ Monitor running tasks and restart if necessary """
+        while True:
+            for task in self.tasks[:]:
+                if task.done():
+                    name = task.get_name()
+                    try:
+                        result = task.result()
+                        self.logger.warning(f"Task {name} completed unexpectedly with result: {result}")
+                    except Exception as e:
+                        self.logger.error(f"Task {name} failed with exception: {str(e)}")
+                        # Restart the component
+                        self.tasks.remove(task)
+                        await self.start_component(name)
+                        self.logger.info(f"Component {name} restarted")
+
+            await asyncio.sleep(1)
+
+        # =============
+        # Continue here
+        # ============
