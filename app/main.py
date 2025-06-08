@@ -73,7 +73,7 @@ class SoloApp:
         self.tasks.append(task)
         self.logger.info(f"Component started: {name}")
 
-    async def monitor_tasks(self):
+    async def monitor_tasks(self): # Monitor currently doesnt handle execution as expected does it???  <-------
         """ Monitor running tasks and restart if necessary """
         while True:
             for task in self.tasks[:]:
@@ -91,6 +91,57 @@ class SoloApp:
 
             await asyncio.sleep(1)
 
-        # =============
-        # Continue here
-        # ============
+    async def startup(self):
+        """ Start all registered components """
+        self.logger.info("Starting Solo...")
+
+        # start all components
+        for name in self.components:
+            await self.start_component(name)
+
+        # start task monitor
+        monitor_task = asyncio.create_task(self.monitor_tasks())
+        monitor_task.set_name="task_monitor"
+        self.tasks.append(monitor_task)
+
+        self.logger.info("Solo startup complete")
+
+    async def shutdown(self):
+        """ Gracefully shutdown the application """
+        self.logger.info("Shutting down Solo....")
+
+        for task in self.tasks:
+            task.cancel()
+
+        if self.tasks:
+            await asyncio.gather(*self.tasks, return_exceptions=True)
+
+        self.logger.info ("Shutdown complete")
+
+        sys.exit(0)
+
+
+async def dummy_component():
+    """ A dummy component for testing. """
+    logger = setup_logger()
+    while True:
+        logger.info("Dummy component running")
+        await asyncio.sleep(5)
+
+async def main():
+    """ Main entry point for the application """
+    app = SoloApp()
+
+    # --- register componentes ---
+    app.register_component("dummy", dummy_component)
+
+    await app.startup()
+
+    try:
+        while True:
+            await asyncio.sleep(3600)
+    except asyncio.CancelledError:
+        await app.shutdown
+
+if __name__ == "__main__":
+    asyncio.run(main())
