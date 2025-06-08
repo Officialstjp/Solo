@@ -1,5 +1,5 @@
 <#
-.SYNOPSIS 
+.SYNOPSIS
 Bootstrap / update dev environment
 
 .DESCRIPTION
@@ -20,68 +20,90 @@ Change Log:
 #>
 Write-Host "============ Environment Setup ============" -ForegroundColor Green
 # --- 1. Ensure a valid python version is installed (3.11)---
-try { 
-    if (-not (python -m pyenv versions | Select-String "3.11")) {
-        write-host "[1. Python Validation] Python 3.11 not found, will be installed..." -ForegroundColor Cyan
-        python -m pyenv install 3.11.9
-    }   
-    python -m pyenv local 3.11.9
-}
-catch {
-    Write-Error "[1. Python Validation] An error ocurred at line $($_.InvocationInfo.ScriptLineNumber) during setup: $_"
-    exit 1
-}
-# --- 2. create venv if missing ---
+write-Host "------- Python Check --------" -ForegroundColor Cyan
 try {
-    if (-not (Test-Path ".venv")) {
-        Write-Host "[2. venv] Creating python virtual environment..." -ForegroundColor Cyan
-        python -m venv .venv
-    }    
+    if (-not (pyenv versions | Select-String "3.11")) {
+        write-host "    [Python Check] Python 3.11 not found, will be installed..."
+        pyenv install 3.11.9
+    } else {
+        write-host "    [Python Check] Python 3.11 found!"
+    }
+    Write-Verbose "    [Python Check] Setting Pyenv to 3.11.9.."
+    pyenv local 3.11.9
+    write-Host "------- Python Check complete -------" -ForegroundColor Green
 }
 catch {
-    Write-Error "[2. venv] An error ocurred at line $($_.InvocationInfo.ScriptLineNumber) during setup: $_"
+    Write-Error "[Python Check] An error ocurred during at line $($_.InvocationInfo.ScriptLineNumber): `n$_"
     exit 1
 }
 
-# --- 3. Activate ---
-try {
-    Write-Host "[3. Activation] Activating Virtual Envrionment... " -ForegroundColor Cyan
-    & .\.venv\scripts\Activate.ps1
-}    
-catch {
-    Write-Error "[3. Activation] An error ocurred at line $($_.InvocationInfo.ScriptLineNumber) during setup: $_"
-    exit 1
-}
-
-# --- 4. Install poetry in the venv ---
+# --- 2. Install poetry in the venv ---
+write-Host "`n------- Poetry Installation Check--------" -ForegroundColor Cyan
 try {
     if (-not (Get-Command poetry -ErrorAction SilentlyContinue)) {
-        Write-Host "[4. Install poetry] Installing poetry... " -ForegroundColor Cyan
-        python -m pip install poetry
+        Write-Host "    [Poetry] Installing poetry... "
+        try {
+            Write-Verbose "    [Poetry] Trying installation using 'python'"
+            (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+            Write-Verbose "    [Poetry] Successful!"
+        }
+        catch {
+            try {
+                Write-Verbose "    [Poetry] Trying installation using 'py'"
+                (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -
+                Write-Verbose "    [Poetry] Successful!"
+            }
+            catch {
+                Write-Error "[Poetry] Couldn't fetch poetry installer script.: `n$_"
+            }
+        }
+        $currentUser = $env:USERNAME
+        $pythonScriptsPath = "C:\Users\$currentUser\AppData\Roaming\Python\Scripts"
+
+        Write-Verbose "    [Poetry] Checking for Python\Scripts in environment variable..."
+        if ($([Environment]::GetEnvironmentVariable("Path", "User")) -notmatch [regex]::Escape($pythonScriptsPath)) {
+            Write-Host "    [Poetry] Adding Python\Scripts directory to PATH: $pythonScriptsPath" -ForegroundColor Yellow
+            [Environment]::SetEnvironmentVariable(
+                "Path",
+                [Environment]::GetEnvironmentVariable("Path", "User") + ";$pythonScriptsPath",
+                "User"
+            )
+            Write-Host "    [Poetry] Path updated. You may need to restart your terminal for changes to take effect." -ForegroundColor Yellow
+        } else {
+            Write-Verbose "    [Poetry] Python\Scripts directory already in PATH"
+        }
     }
-}    
+    else {
+        Write-Host "    [Poetry] Poetry is already installed."
+    }
+    write-Host "------- Poetry Check complete -------" -ForegroundColor Green
+}
 catch {
-    Write-Error "[4. Install poetry] An error ocurred at line $($_.InvocationInfo.ScriptLineNumber) during setup: $_"
+    Write-Error "[Poetry] An error ocurred during poetry installation $($_.InvocationInfo.ScriptLineNumber): `n$_"
     exit 1
 }
 
-# --- 5. install project dependencies ---
+# --- 3. install project dependencies ---
+write-Host "`n------- Dependency Installation --------" -ForegroundColor Cyan
 try {
-    Write-Host "5. Dependency installation] Installing dependencies... " -ForegroundColor Cyan
-    python -m poetry install --with dev
-}    
+    Write-Host "    [Dependencies] Installing dependencies... "
+    poetry install --with dev
+    write-Host "------- Dependency installation complete -------" -ForegroundColor Green
+}
 catch {
-    Write-Error "[5. Dependency installation] An error at line $($_.InvocationInfo.ScriptLineNumber) Ocurred during setup: $_"
+    Write-Error "[Dependencies] An error occured during dependency insitallation at line $($_.InvocationInfo.ScriptLineNumber):`n$_"
     exit 1
 }
 
-# --- 6. install Git hooks ---
+# --- 4. install Git hooks ---
+write-Host "`n------- hooks Installation --------" -ForegroundColor Cyan
 try {
-    Write-Host "[6. Hook initialization] installing Git hooks" -ForegroundColor Cyan
-    python -m poetry run pre-commit install
-}    
+    Write-Host "    [hooks] installing Git hooks"
+    poetry run pre-commit install
+    write-Host "------- hook installation complete -------" -ForegroundColor Green
+}
 catch {
-    Write-Error "[6. Hook initialization] An error ocurred at line $($_.InvocationInfo.ScriptLineNumber) during setup: $_"
+    Write-Error "[hooks] An error ocurred during hook initialization at line $($_.InvocationInfo.ScriptLineNumber): `n$_"
     exit 1
 }
 
