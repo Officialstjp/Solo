@@ -15,7 +15,9 @@
   Module Name: <file>
   Purpose   : <short blurb>
   Params    : <key parameters>
-  History   : <YYYY-MM-DD> <author> – <change>
+  History   :
+      Date          Notes
+      MM.DD.YYYY
   """
   ```
   Sectioned comments:
@@ -42,7 +44,7 @@
 For all below: if not possible at the current time, keep in mind and run when in an executable state.
 - **Run tests**: pytest -q.
 
-- **Security**: run bandit -r . -ll; block merge on Medium or higher severity. 
+- **Security**: run bandit -r . -ll; block merge on Medium or higher severity.
 
 - **Coverage**: target ≥ 80 %; fail build below that.
 
@@ -61,7 +63,7 @@ For all below: if not possible at the current time, keep in mind and run when in
 - **Ask when unsure**: if tests fail or ambiguity arises, pause and request guidance.
 
 - **No auto-merge**: human approval is mandatory for every PR.
-  
+
 ## 7. References
 - **README**: Classicaly, README.md contains an overview of the projet
 
