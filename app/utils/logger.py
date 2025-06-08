@@ -7,7 +7,6 @@ History   :
     2025-06-08      Init
 
 """
-
 import sys
 import structlog
 from typing import Optional, Dict, Any
