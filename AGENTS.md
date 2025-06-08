@@ -39,11 +39,10 @@
 -**Pull Requests**: always open as draft; wait for manual approval by Stefan.
 
 ## 4. Testing & Quality Gates
+For all below: if not possible at the current time, keep in mind and run when in an executable state.
 - **Run tests**: pytest -q.
 
-- **Lint**: flake8 . --max-line-length 120.
-
-- **Security**: run bandit -r . -ll; block merge on Medium or higher severity.
+- **Security**: run bandit -r . -ll; block merge on Medium or higher severity. 
 
 - **Coverage**: target ≥ 80 %; fail build below that.
 
