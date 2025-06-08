@@ -45,8 +45,6 @@ Solo/
 
 ## 2. Module Interfaces & Data-Flow
 
-![[Technik/Projects/Solo/resources/Solo_Data_Flow|650]]
-
 - **Event Bus** – **events.py** defines small pydantic models (**STTEvent**, **LLMReply**, **ActionRequest**). All long-running services push / subscribe via an **asyncio.Queue**; this keeps cross-module coupling near zero.
 
 - **Speech I/O** – **stt.py** wraps _faster-whisper_ in **CTranslate2** for real-time transcription; **tts.py** calls _Piper_ for local, low-latency TTS voices on Windows.
