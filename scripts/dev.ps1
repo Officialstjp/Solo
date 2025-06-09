@@ -68,7 +68,9 @@ try {
                 [Environment]::GetEnvironmentVariable("Path", "User") + ";$pythonScriptsPath",
                 "User"
             )
-            Write-Host "    [Poetry] Path updated. You may need to restart your terminal for changes to take effect." -ForegroundColor Yellow
+            Write-Host "    [Poetry] User PATH updated." -ForegroundColor Yellow
+            $env:Path = [Environment]::GetEnvironmentVariable("Path", "User") + ";" + [Environment]::GetEnvironmentVariable("Path", "Machine")
+            Write-Host "    [Poetry] Session PATH updated"
         } else {
             Write-Verbose "    [Poetry] Python\Scripts directory already in PATH"
         }
@@ -87,23 +89,62 @@ catch {
 write-Host "`n------- Dependency Installation --------" -ForegroundColor Cyan
 try {
     Write-Host "    [Dependencies] Installing dependencies... "
-    poetry install --with dev
+
+    try {
+        poetry install --with dev
+        Write-Host "    [Dependencies] All dependencies installed successfully" -ForegroundColor Green
+    }
+    catch {
+        Write-Warning "     [Dependencies] Failed to install all dependencies together. Trying runtime dependencies only..."
+
+        poetry install --no-dev
+
+        Write-Host "    [Dependencies] Installing dev dependencies seperately..." -ForegroundColor Yellow
+        poetry install --only dev
+
+    }
+
     write-Host "------- Dependency installation complete -------" -ForegroundColor Green
 }
 catch {
     Write-Error "[Dependencies] An error occured during dependency insitallation at line $($_.InvocationInfo.ScriptLineNumber):`n$_"
+
+    Write-Host "`n[Dependencies] Checking Poetry environment:" -ForegroundColor Yellow
+    poetry env info
+    Write-Host "`n[Dependencies] Listing available packages:" -ForegroundColor Yellow
+    poetry show
     exit 1
 }
 
 # --- 4. install Git hooks ---
-write-Host "`n------- hooks Installation --------" -ForegroundColor Cyan
+write-Host "`n------- Hooks Installation --------" -ForegroundColor Cyan
 try {
-    Write-Host "    [hooks] installing Git hooks"
+    Write-Host "    [Hooks] installing Git hooks"
+    $precommitInstalled = poetry run pip list | select-String "pre_commit"
+    if (-not $precommitInstalled) { $precommitInstalled = poetry run pip list | select-String "pre-commit"}
+
+    if (-not $precommitInstalled) {
+        Write-Warning "    [Hooks] pre-commit not found in the environment. Installing manually..."
+        poetry run pip install pre-commit
+    }
+
+    Write-Host "    [Hooks] Installing Git hooks"
     poetry run pre-commit install
     write-Host "------- hook installation complete -------" -ForegroundColor Green
 }
 catch {
-    Write-Error "[hooks] An error ocurred during hook initialization at line $($_.InvocationInfo.ScriptLineNumber): `n$_"
+    Write-Error "[Hooks] An error ocurred during hook initialization at line $($_.InvocationInfo.ScriptLineNumber): `n$_"
+
+    Write-Host "`[Hooks] Checking pre-commit status:" -ForegroundColor Yellow
+    try { poetry run pip show pre-commit } catch { Write-Host "pre-commit not installed" -ForegroundColor Red }
+    Write-Host "`n[Hooks] Checking if .pre-commit-config.yaml exists: " -ForegroundColor Yellow
+    if (Test-Path ".\.pre-commit-config.yaml") {
+        Write-Host ".pre-commit-config.yaml found" -ForegroundColor Green
+        Write-Host "$(Get-Content ".pre-commit-config.yaml" | Select-Object -First 10)`n..."
+    }
+    else {
+        Write-Host ".pre-commit-config.yaml not found" -ForegroundColor Red
+    }
     exit 1
 }
 
