@@ -18,7 +18,7 @@ class AppConfig(BaseModel):
 
     # Logging configuration
     log_level: str= Field(default="INFO")
-    json_logs: bool = Field(efault=True)
+    json_logs: bool = Field(default=True)
     log_file: Optional[str] = None
 
     # LLM configuration
@@ -27,7 +27,7 @@ class AppConfig(BaseModel):
 
     # STT/TTS configuration
     stt_model: str = Field(default="faster-whisper-small")
-    tts_voice: str = Field(defualt="en_us/vctk_low/p303")
+    tts_voice: str = Field(default="en_us/vctk_low/p303")
 
     # API configuration
     api_host: str = Field(default="0.0.0.0")

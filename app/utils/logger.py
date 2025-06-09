@@ -16,7 +16,7 @@ def setup_logger(
         log_level: str = "INFO",
         json_format: bool = True,
         log_file: Optional[str] = None,
-) -> structlog.stdlib.BoundLooger:
+) -> structlog.stdlib.BoundLogger:
     """Configure and return a structured logger."""
 
     # set up standard library logging
@@ -44,7 +44,7 @@ def setup_logger(
         processors=processors,
         logger_factory=structlog.stdlib.LoggerFactory(),
         wrapper_class=structlog.stdlib.BoundLogger,
-        cache_lagger_on_first_use=True,
+        cache_logger_on_first_use=True,
     )
 
     logger = structlog.get_logger()

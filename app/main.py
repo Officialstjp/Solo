@@ -14,9 +14,9 @@ import signal
 import sys
 from typing import Dict, List, Callable, Coroutine, Any
 
-from app.utils.logger import setup_logger
-from app.utils.events import EventBus, EventType
-from app.config import AppConfig
+from utils.logger import setup_logger
+from utils.events import EventBus, EventType
+from config import AppConfig
 
 class SoloApp:
     """ Main application for Solo """
@@ -54,7 +54,9 @@ class SoloApp:
     def _handle_shutdown(self, signum, frame):
         """ Handle shutdown signals """
         self.logger.info(f"Recieved signal {signum}, initating shutdown")
-        asyncio.create_task(self.shutdown())
+        for task in asyncio.all_tasks():
+            if task is not asyncio.current_task():
+                task.cancel()
 
     def register_component(self, name: str, coro_func: Callable[[], Coroutine[Any, Any, None]]):
         """ Register a component with the application """
@@ -86,6 +88,10 @@ class SoloApp:
                     try:
                         result = task.result()
                         self.logger.warning(f"Task {name} completed unexpectedly with result: {result}")
+                        # Restart the component
+                        self.tasks.remove(task)
+                        await self.start_component(name)
+                        self.logger.info(f"Component {name} restarted after completion")
                     except Exception as e:
                         self.logger.error(f"Task {name} failed with exception: {str(e)}")
                         # Restart the component
@@ -105,7 +111,7 @@ class SoloApp:
 
         # start task monitor
         monitor_task = asyncio.create_task(self.monitor_tasks())
-        monitor_task.set_name=("task_monitor")
+        monitor_task.set_name("task_monitor")
         self.tasks.append(monitor_task)
 
         self.logger.info("Solo startup complete")
@@ -122,7 +128,7 @@ class SoloApp:
 
         self.logger.info ("Shutdown complete")
 
-        sys.exit(0)
+        return True
 
 
 async def dummy_component():
@@ -142,10 +148,11 @@ async def main():
     await app.startup()
 
     try:
-        while True:
-            await asyncio.sleep(3600)
+        await asyncio.Event().wait()
     except asyncio.CancelledError:
-        await app.shutdown
+        pass
+    finally:
+        await app.shutdown()
 
 if __name__ == "__main__":
     asyncio.run(main())
