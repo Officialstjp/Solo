@@ -43,7 +43,7 @@ class LLMRequestEvent(BaseEvent):
     system_prompt: Optional[str] = None
     parameters: Dict[str, Any] = {}
 
-class LLMResponse(BaseEvent):
+class LLMResponseEvent(BaseEvent):
     """ Response from LLM """
     event_type: EventType = EventType.LLM_RESPONSE
     response: str
@@ -72,7 +72,6 @@ class StatusUpdateEvent(BaseEvent):
 # Event Queue
 class EventBus:
     """ Central event bus for pub/sub communication """
-
     def __init__(self):
         self.queues: Dict[EventType, asyncio.Queue] = {
             event_type: asyncio.Queue() for event_type in EventType
