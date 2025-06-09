@@ -73,12 +73,16 @@ class SoloApp:
         self.tasks.append(task)
         self.logger.info(f"Component started: {name}")
 
-    async def monitor_tasks(self): # Monitor currently doesnt handle execution as expected does it???  <-------
+    async def monitor_tasks(self): # Currently, planned are only tasks that run indefinetly until shutdown, so we treat all results as unexpected
         """ Monitor running tasks and restart if necessary """
         while True:
             for task in self.tasks[:]:
                 if task.done():
                     name = task.get_name()
+
+                    if name == "task_monitor":
+                        continue
+
                     try:
                         result = task.result()
                         self.logger.warning(f"Task {name} completed unexpectedly with result: {result}")
@@ -101,7 +105,7 @@ class SoloApp:
 
         # start task monitor
         monitor_task = asyncio.create_task(self.monitor_tasks())
-        monitor_task.set_name="task_monitor"
+        monitor_task.set_name=("task_monitor")
         self.tasks.append(monitor_task)
 
         self.logger.info("Solo startup complete")
