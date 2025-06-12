@@ -37,4 +37,4 @@ if ($globalInstall) {
 }
 
 Write-Host "================= Cleanup Complete =================" -ForegroundColor Green
-Write-Host "You can now run .\scripts\dev.ps1 to set up a fresh environment."
+Write-Host "You can now run .\scripts\setup-dev.ps1 to set up a fresh environment."
