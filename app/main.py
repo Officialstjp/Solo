@@ -7,13 +7,14 @@ History   :
     2025-06-08      Init
 
 """
-# For later, time spent (+ plan and doc work) = ~10h | last changed 2:29 08.06.2025
+# For later, time spent (+ plan and doc work) = ~22h | last changed 12.06.2025, 19:00 curr daily = 0:45
 
 import asyncio
 import signal
 import sys
 from typing import Dict, List, Callable, Coroutine, Any
 
+from core.llm_runner import create_llm_runner
 from utils.logger import setup_logger
 from utils.events import EventBus, EventType
 from config import AppConfig
@@ -58,9 +59,9 @@ class SoloApp:
             if task is not asyncio.current_task():
                 task.cancel()
 
-    def register_component(self, name: str, coro_func: Callable[[], Coroutine[Any, Any, None]]):
+    def register_component(self, name: str, coro_func: Callable[..., Coroutine[Any, Any, None]], *args, **kwargs):
         """ Register a component with the application """
-        self.components[name] = coro_func
+        self.components[name] = lambda: coro_func(*args, **kwargs)
         self.logger.info(f"Component registered: {name}")
 
     async def start_component(self, name: str):
@@ -143,6 +144,7 @@ async def main():
     app = SoloApp()
 
     # --- register componentes ---
+    app.register_component("llm_runner", create_llm_runner, app.event_bus, app.config.model_path)
     app.register_component("dummy", dummy_component)
 
     await app.startup()
