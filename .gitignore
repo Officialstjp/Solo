@@ -9,6 +9,13 @@ scripts/.python-version
 # in case
 temp/
 
+# pre commit config
+.pre-commit-config.yaml
+
+# dev llama documentation
+llama-cpp-python · PyPI.pdf
+
+tests/scratchpad.py
 
 # ============= PYTHON SECTION =====================
 # Source: https://github.com/github/gitignore/blob/main/Python.gitignore
@@ -207,5 +214,3 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
-
-.pre-commit-config.yaml
