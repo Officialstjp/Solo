@@ -67,10 +67,20 @@ function Build-LlamaCpp {
         git pull
         Pop-Location
     }
-
+    # Remove the build directory if it exists to start fresh
+    if (Test-Path $buildDir) {
+        Write-Host "Removing existing build directory..." -ForegroundColor Yellow
+        Remove-Item -Recurse -Force $buildDir
+    }
     # create build directory
     if (-not (Test-Path $buildDir)) {
         New-Item -ItemType Directory -Path $buildDir | Out-Null
+    }
+
+    # Clear any existing CMAKE_ARGS environment variable
+    if (Test-Path env:CMAKE_ARGS) {
+        Write-Host "Clearing existing CMAKE_ARGS environment variable: $env:CMAKE_ARGS" -ForegroundColor Yellow
+        Remove-Item env:CMAKE_ARGS
     }
 
     # build with CMake
@@ -79,11 +89,29 @@ function Build-LlamaCpp {
 
     # Configure with CMake
     Write-Host "Configure CMake..." -ForegroundColor Cyan
-    cmake .. -DLLAMA_CUBLAS=ON -DCMAKE_BUILD_TYPE=Release
+
+    # Print the cmake command for debugging
+    $cmakeCmd = "cmake .. -DGGML_CUDA=ON -DLLAMA_CURL=OFF -DCMAKE_BUILD_TYPE=Release"
+    Write-Host "Running: $cmakeCmd" -ForegroundColor Cyan
+
+    # Run the command
+    Invoke-Expression $cmakeCmd
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "CMake configuration failed with exit code $LASTEXITCODE"
+        Pop-Location
+        exit 1
+    }
 
     # Build
     Write-Host "Building..." -ForegroundColor Cyan
     cmake --build . --config Release
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Build failed with exit code $LASTEXITCODE"
+        Pop-Location
+        exit 1
+    }
 
     Pop-Location
 
@@ -99,6 +127,10 @@ function Build-LlamaCpp {
 
 # Main Script
 Write-Host "============ Build process started ============" -ForegroundColor Green
+
+# Debug environment variables
+Write-Host "Current environment variables:" -ForegroundColor Cyan
+Get-ChildItem env: | Where-Object { $_.Name -like "*CMAKE*" -or $_.Name -like "*LLAMA*" -or $_.Name -like "*GGML*" } | Format-Table -AutoSize
 
 Check-RequiredTools
 Build-LlamaCpp
