@@ -7,7 +7,7 @@ History   :
     2025-06-08      Init
 
 """
-# For later, time spent (+ plan and doc work) = ~22h | last changed 12.06.2025, 19:00 curr daily = 0:45
+# For later, time spent (+ plan and doc work) = ~26h | last changed 12.06.2025, 23:00 curr daily = 2:00
 
 import asyncio
 import signal
