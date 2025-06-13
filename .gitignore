@@ -18,6 +18,7 @@ rhasspy_piper_ A fast, local neural text to speech system.pdf
 
 tests/scratchpad.py
 tests/scratchpad copy.py
+llama_cpp.py
 
 # ============= PYTHON SECTION =====================
 # Source: https://github.com/github/gitignore/blob/main/Python.gitignore
