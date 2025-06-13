@@ -14,8 +14,10 @@ temp/
 
 # dev llama documentation
 llama-cpp-python · PyPI.pdf
+rhasspy_piper_ A fast, local neural text to speech system.pdf
 
 tests/scratchpad.py
+tests/scratchpad copy.py
 
 # ============= PYTHON SECTION =====================
 # Source: https://github.com/github/gitignore/blob/main/Python.gitignore
@@ -214,5 +216,3 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
-rhasspy_piper_ A fast, local neural text to speech system.pdf
-tests/scratchpad copy.py
