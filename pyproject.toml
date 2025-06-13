@@ -13,7 +13,7 @@ streamlit = "^1.35"                                     # dashboard
 llama-cpp-python = {version="^0.2.70", extras=["cuda"]} # GPU LLM backend
 ctranslate2 = {version = "^4.4"}                        # faster-whisper core
 faster-whisper = "^1.0.1"                               # STT wrapper
-piper-tts = "^1.2.0"                                    # local TTS
+piper-tts = "^1.1.0"                                    # local TTS
 pvporcupine = "^3.0.0"                                  # wake-word
 chromadb = "^0.4.24"                                    # vector store
 crewai = "^0.22"                                        # multi-agent bus
