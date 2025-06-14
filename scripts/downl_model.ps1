@@ -9,7 +9,7 @@ This script downloads a small GGUF model for testing purposes.
 $ErrorActionPreference = "Stop"
 
 # Create models directory if it doesn't exist
-$modelsDir = "models"
+$modelsDir = "$PSScriptRoot\models"
 if (-not (Test-Path $modelsDir)) {
     New-Item -ItemType Directory -Path $modelsDir | Out-Null
 }
