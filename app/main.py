@@ -14,7 +14,8 @@ import signal
 import sys
 from typing import Dict, List, Callable, Coroutine, Any
 
-from core.llm_runner import create_llm_runner
+from core.llm_runner import llm_runner_component
+from core.llm_tester import llm_tester_component
 from utils.logger import setup_logger
 from utils.events import EventBus, EventType
 from config import AppConfig
@@ -132,20 +133,19 @@ class SoloApp:
         return True
 
 
-async def dummy_component():
-    """ A dummy component for testing. """
-    logger = setup_logger()
-    while True:
-        logger.info("Dummy component running")
-        await asyncio.sleep(5)
-
 async def main():
     """ Main entry point for the application """
     app = SoloApp()
 
     # --- register componentes ---
-    app.register_component("llm_runner", create_llm_runner, app.event_bus, app.config.model_path)
-    app.register_component("dummy", dummy_component)
+    app.register_component(
+        "llm_runner",
+        lambda: llm_runner_component(app.event_bus, app.config.model_path)
+    )
+    app.register_component(
+        "llm_tester",
+        lambda: llm_tester_component(app.event_bus)
+    )
 
     await app.startup()
 
