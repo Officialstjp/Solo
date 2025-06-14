@@ -23,7 +23,7 @@ class AppConfig(BaseModel):
 
     # LLM configuration
     llm_backend: str = Field(default="llama.cpp") # or "ollama"
-    model_path: Optional[str] = None
+    model_path: Optional[str] = r"C:\coding\projects\Solo\models\tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
 
     # STT/TTS configuration
     stt_model: str = Field(default="faster-whisper-small")
