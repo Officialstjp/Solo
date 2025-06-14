@@ -24,13 +24,15 @@ class LlamaModel:
     def __init__(
             self,
             model_path: str,
-            n_ctx: int = 2048,
-            n_batch: int = 512,
-            n_gpu_layers: int = -1, # -1 means use all layers on gpu
+            n_ctx: int = 4096, # context
+            n_batch: int = 512, # tokens per micro-batch
+            n_threads: int = 12, # CPU threads for offloaded layers
+            n_threads_batch=12,  # CPU threads for batching phase
+            n_gpu_layers: int = 35, # -1 means use all layers on gpu
             verbose: bool = False,
     ):
         """ Initialize the LLM model """
-        self.logger = setup_logger
+        self.logger = setup_logger()
         self.logger.info(f"Initializing LlamaModel with model: {model_path}")
 
         if not os.path.exists(model_path):
@@ -39,6 +41,8 @@ class LlamaModel:
         self.model_path = model_path
         self.n_ctx = n_ctx
         self.n_batch = n_batch
+        self.n_threads = n_threads
+        self.n_threads_batch = n_threads_batch
         self.n_gpu_layers = n_gpu_layers
 
         self.logger.info("Loading model, this may take a while...")
@@ -49,6 +53,8 @@ class LlamaModel:
                 model_path=model_path,
                 n_ctx=n_ctx,
                 n_batch=n_batch,
+                n_threads=n_threads,
+                n_threads_batch=n_threads_batch,
                 n_gpu_layers=n_gpu_layers,
                 verbose=verbose,
             )
@@ -74,7 +80,7 @@ class LlamaModel:
         # Prepare the full prompt with system prompt if provided
         full_prompt = prompt
         if system_prompt:
-            full_prompt = f"{system_prompt}\n\n{prompt}"
+            full_prompt = f"<|system|>\n{system_prompt}\n<|user|>\n{prompt}<|assistant|>" #tinyllama
 
         # run in a sepearate thread to avoid blocking the event loop
         start_time = time.time()
@@ -111,7 +117,7 @@ class LlamaModel:
         return result, metrics
 
 class LLMRunner:
-    """ Main LLM runner componnet that interfaces with the event bus """
+    """ Main LLM runner component that interfaces with the event bus """
 
     def __init__(self, event_bus: EventBus, model_path: str):
         """ Initialize the LLM runner component """
@@ -156,14 +162,14 @@ class LLMRunner:
                         model_name=os.path.basename(self.model_path)
                     )
 
-                    await self.evnet_bus.pusblish(response_event)
+                    await self.event_bus.publish(response_event)
 
                 except Exception as e:
                     self.logger.error(f"Error processing LLM request: {str(e)}")
 
             await asyncio.sleep(0.01)
 
-    async def create_llm_runnner(event_bus: EventBus, model_path: str):
-        """ Create and return the LLM runnner component """
-        runner = LLMRunner(event_bus=event_bus, model_path=model_path)
-        return runner.run()
+async def llm_runner_component(event_bus: EventBus, model_path: str):
+    """ Create and return the LLM runner component """
+    runner = LLMRunner(event_bus=event_bus, model_path=model_path)
+    await runner.run()
