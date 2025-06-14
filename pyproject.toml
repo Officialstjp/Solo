@@ -20,6 +20,7 @@ crewai = "^0.22"                                        # multi-agent bus
 python-dotenv = "^1.0"
 structlog = "^24.1"
 pydantic = "^2.7"
+aioconsole = "^0.8.1"
 
 [tool.poetry.group.dev.dependencies]                    # - DEV + CI
 black = "^24.4"
