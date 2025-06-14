@@ -98,6 +98,7 @@ try {
     try {
         poetry install --with dev
         poetry run pip install structlog
+        poetry run pip install aioconsole
         Write-Host "[Dependencies] Installation complete." -ForegroundColor Green
     } catch {
         Write-Warning "[Dependencies] Failed to install all dependencies together. Trying runtime dependencies only..."
