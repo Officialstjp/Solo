@@ -11,23 +11,23 @@ if (Test-Path "llama.cpp") {
 }
 
 # 2. Clear environment variables
-Write-Host "Clearing environment variables..." -ForegroundColor
+Write-Host "Clearing environment variables..."
 Remove-Item env:CMAKE_ARGS -ErrorAction SilentlyContinue
 Remove-Item env:FORCE_CMAKE -ErrorAction SilentlyContinue
 Write-Host "Environment variables cleared." -ForegroundColor Green
 
 # 3. Remove Poetry environments
-Write-Host "Removing Poetry environments..." -ForegroundColor
+Write-Host "Removing Poetry environments..."
 poetry env remove --all
 Write-Host "Poetry environments removed." -ForegroundColor Green
 
 # 4. Clear Poetry cache
-Write-Host "Clearing Poetry cache..." -ForegroundColor
+Write-Host "Clearing Poetry cache..."
 poetry cache clear --all pypi
 Write-Host "Poetry cache cleared." -ForegroundColor Green
 
 # 5. Check for Python packages that might interfere
-Write-Host "Checking for global llama-cpp-python installation..." -ForegroundColor
+Write-Host "Checking for global llama-cpp-python installation..."
 $globalInstall = pip list | Select-String "llama-cpp-python"
 if ($globalInstall) {
     Write-Host "Found global installation of llama-cpp-python. This might interfere with Poetry." -ForegroundColor Red
