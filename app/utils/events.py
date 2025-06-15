@@ -86,4 +86,4 @@ class EventBus:
         while True:
             event = await self.queues[event_type].get()
             yield event
-            self.queues[event_type].task_done
+            self.queues[event_type].task_done()
