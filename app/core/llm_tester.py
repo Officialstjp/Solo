@@ -1,40 +1,30 @@
 """
 Module: app/core/llm_tester.py
 Purpose: Interactive component for testing LLM via event bus
+History:
+    Date            Notes
+    2025-06-08      Init
+    2025-06-15      Updated to work with enhanced model management
 """
 
 import asyncio
 import uuid
 from datetime import datetime
 import aioconsole
+import os
 
 from utils.logger import setup_logger
 from utils.events import EventBus, EventType, LLMRequestEvent, LLMResponseEvent
 
-SETTINGS = {
-    "system_prompt_mistral":
-    """You are an advanced research assistant, named Solo. Your task is to support, advise and teach the user in any task they come across.
-    Always speak in a natural tone, act like an absolute professional in the task at hand and speak as such.
-    Refrain from report-like breakdowns, in favor of natural conversational tone.
-    You currently reside in a local experimental Python environment, to be expanded into a full ecosystem.
+DEFAULT_SYSTEM_PROMPT = """You are an advanced research assistant, named Solo. Your task is to support, advise and teach the user in any task they come across.
+Always speak in a natural tone, act like an absolute professional in the task at hand and speak as such.
+Refrain from report-like breakdowns, in favor of natural conversational tone.
+You currently reside in a local experimental Python environment, to be expanded into a full ecosystem.
 
-    Below is the Users request, treat it as holy and always do your best to achieve it, but point out if you are not able to.
-    """,
-    "system_prompt_def": """You are a helpful AI assistant called Solo.
-    Provide clear, accurate, and concise responses to questions.
-    If you don't know something, say so rather than making up information."""
-}
-"""You are a helpful code assistant. Your task is to generate a valid JSON object based on the given information. So for instance the following:
-    "name: John, lastnahme: Smith, address: #1 Samuel St."
-    would be converted to:
-    {
-    "address": "#1 Samuel St.",
-    "lastname": "Smith",
-    "name": "John"
-    }
-    """
+Below is the Users request, treat it as holy and always do your best to achieve it, but point out if you are not able to.
+"""
 
-async def llm_tester_component(event_bus: EventBus):
+async def llm_tester_component(event_bus: EventBus, default_system_prompt: str = None):
     """Interactive component to test LLM via the event bus"""
 
     logger = setup_logger()
@@ -42,40 +32,57 @@ async def llm_tester_component(event_bus: EventBus):
 
     active_requests = set()
     response_events = {}
+    session_id = str(uuid.uuid4())  # Use one session ID for the entire conversation
 
     listener_task = asyncio.create_task(
         response_listener(event_bus, active_requests, response_events)
     )
 
+    # Use provided default system prompt or fallback
+    system_prompt = default_system_prompt or DEFAULT_SYSTEM_PROMPT
+
     print("\n=== Default System Prompt ===")
-    print(SETTINGS["system_prompt_mistral"])
+    print(system_prompt)
     print("=============================\n")
 
     use_default = await aioconsole.ainput(f"Use default system prompt? (Y/n): ")
-    system_prompt = SETTINGS["system_prompt_mistral"] if use_default.lower() in ('', 'y', 'yes') else None
-
     if use_default.lower() in ('', 'y', 'yes'):
         print("Using default system prompt.")
     else:
-        system_prompt = await aioconsole.ainput("Enter custom system prompt: ")
-        if not system_prompt.strip():
-            system_prompt = None
+        new_prompt = await aioconsole.ainput("Enter custom system prompt: ")
+        if new_prompt.strip():
+            system_prompt = new_prompt
+            print("Custom system prompt set.")
+        else:
             print("No system prompt will be used.")
+            system_prompt = None
 
-    print("\nEnter a prompt (or 'exit' to quit, 'clear' to clear screen):")
+    print("\nEnter a prompt (or type a command):")
+    print("Commands: 'exit' to quit, 'clear' to clear screen, 'system' to edit system prompt")
+    print("          'params' to adjust parameters, 'history' to view/clear conversation")
+
+    # Default parameters
+    params = {
+        "max_tokens": 512,
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "maintain_history": True,
+        "use_cache": True
+    }
 
     try:
         while True:
             has_responses = False
-            for session_id in list(response_events.keys()):
+            for req_session_id in list(response_events.keys()):
                 has_responses = True
-                event = response_events.pop(session_id)
-                print(f"\n--- Response (session {session_id[-6:]}) ---")
+                event = response_events.pop(req_session_id)
+                print(f"\n--- Response ---")
                 print(f"{event.response}")
                 print(f"Generated {event.tokens_used} tokens in {event.generation_time_ms/1000:.2f}s")
+                print(f"Model: {event.model_name}")
                 print("-------------------------------------------\n")
-                if session_id in active_requests:
-                    active_requests.remove(session_id)
+                if req_session_id in active_requests:
+                    active_requests.remove(req_session_id)
 
             if not active_requests:
                 prompt = await aioconsole.ainput("> ")
@@ -88,32 +95,84 @@ async def llm_tester_component(event_bus: EventBus):
                     continue
 
                 if prompt.lower() == 'system':
-                    print(f"\n=== Current system prompt ===\n{SETTINGS['system_prompt_mistral']}")
+                    print(f"\n=== Current system prompt ===\n{system_prompt or 'None'}")
                     new_prompt = await aioconsole.ainput("\nEnter new system prompt (or press Enter to keep current):")
                     if new_prompt.strip():
-                        SETTINGS["system_prompt_mistral"] = new_prompt
-                        system_prompt = SETTINGS["system_prompt_mistral"]
+                        system_prompt = new_prompt
                         print("- System prompt updated. -")
+                    continue
+
+                if prompt.lower() == 'params':
+                    print(f"\n=== Current parameters ===")
+                    for k, v in params.items():
+                        print(f"{k}: {v}")
+
+                    print("\nEnter new parameters (press Enter to keep current):")
+
+                    new_max_tokens = await aioconsole.ainput(f"max_tokens [{params['max_tokens']}]: ")
+                    if new_max_tokens.strip():
+                        try:
+                            params['max_tokens'] = int(new_max_tokens)
+                        except ValueError:
+                            print("Invalid value, keeping current.")
+
+                    new_temp = await aioconsole.ainput(f"temperature [{params['temperature']}]: ")
+                    if new_temp.strip():
+                        try:
+                            params['temperature'] = float(new_temp)
+                        except ValueError:
+                            print("Invalid value, keeping current.")
+
+                    new_top_p = await aioconsole.ainput(f"top_p [{params['top_p']}]: ")
+                    if new_top_p.strip():
+                        try:
+                            params['top_p'] = float(new_top_p)
+                        except ValueError:
+                            print("Invalid value, keeping current.")
+
+                    new_history = await aioconsole.ainput(f"maintain_history [{params['maintain_history']}]: ")
+                    if new_history.strip():
+                        params['maintain_history'] = new_history.lower() in ('true', 'yes', 'y', '1')
+
+                    new_cache = await aioconsole.ainput(f"use_cache [{params['use_cache']}]: ")
+                    if new_cache.strip():
+                        params['use_cache'] = new_cache.lower() in ('true', 'yes', 'y', '1')
+
+                    print("- Parameters updated. -")
+                    continue
+
+                if prompt.lower() == 'history':
+                    print("\n=== Conversation History ===")
+                    if params['maintain_history']:
+                        print("History is being maintained.")
+                        clear_history = await aioconsole.ainput("Clear history? (y/N): ")
+                        if clear_history.lower() in ('y', 'yes'):
+                            # Create a new session ID to reset history
+                            session_id = str(uuid.uuid4())
+                            print("- History cleared. -")
+                    else:
+                        print("History is not being maintained.")
+                        enable_history = await aioconsole.ainput("Enable history? (y/N): ")
+                        if enable_history.lower() in ('y', 'yes'):
+                            params['maintain_history'] = True
+                            print("- History enabled. -")
+                    continue
 
                 if not prompt.strip():
                     continue
 
-                session_id = str(uuid.uuid4())
                 active_requests.add(session_id)
 
+                # Create the request event
                 request_event = LLMRequestEvent(
                     session_id=session_id,
                     prompt=prompt,
                     system_prompt=system_prompt,
-                    parameters={
-                        "max_tokens": 512,
-                        "temperature": 0.7,
-                        "top_p": 0.95
-                    }
+                    parameters=params
                 )
 
                 logger.info(f"Sending LLM request: {session_id}")
-                print(f"Request sent (session {session_id[-6:]}), waiting for response...")
+                print(f"Request sent, waiting for response...")
                 await event_bus.publish(request_event)
 
                 await asyncio.sleep(0.2)
@@ -129,7 +188,7 @@ async def llm_tester_component(event_bus: EventBus):
         except asyncio.CancelledError:
             pass
 
-    logger.info ("LLM Tester stopped")
+    logger.info("LLM Tester stopped")
 
 async def response_listener(event_bus: EventBus, active_requests: set, response_events: dict):
     """ Listen for LLM responses and add them to the queue """
