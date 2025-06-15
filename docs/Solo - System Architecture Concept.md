@@ -92,8 +92,8 @@ Solo/
 | Configuration           | ✅ Implemented         | Pydantic models for config with environment variable support                                       |
 | Logging                 | ✅ Implemented         | Structured logging with JSON output option                                                         |
 | Event Bus               | ✅ Implemented         | Async event pub/sub system with typed event definitions                                            |
-| LLM Runner              | ✅ Partial             | Basic llama.cpp integration with GPU support                                                       |
-| CLI Tester              | 🔄 In Progress        | Interactive CLI for testing LLM (needs improved UX)                                                |
+| LLM Runner              | ✅ Implemented         | llama.cpp integration with GPU support, multiple model formats, response sanitization              |
+| CLI Tester              | ✅ Implemented         | Interactive CLI for testing LLM with system prompt support                                         |
 | STT Pipeline            | ⏳ Planned             | Not yet implemented                                                                               |
 | TTS Output              | ⏳ Planned             | Not yet implemented                                                                               |
 | API Layer               | ⏳ Planned             | Not yet implemented                                                                               |
@@ -104,21 +104,21 @@ Solo/
 
 ### Next Steps
 
-1. **Immediate Priority**: Fix UX issues in the LLM Tester interface
-   - Improve prompt flow and response handling
-   - Fix system prompt reuse issues
-   - Enhance error handling and response formatting
+1. **Immediate Priority**: Implement Memory/RAG capabilities
+   - Integrate ChromaDB for vector storage
+   - Add document embedding functionality
+   - Implement semantic search for contextual retrieval
+   - Create context-aware prompting
 
 2. **Short-term Roadmap**:
-   - Complete LLM runner with proper caching and error handling
    - Implement basic STT pipeline for audio input
    - Add TTS output for spoken responses
    - Begin API layer implementation
 
 3. **Mid-term Goals**:
    - Develop monitoring dashboard
-   - Implement memory/RAG capabilities
-   - Add agent orchestration
+   - Implement agent orchestration
+   - Add wake-word detection
 
 ### Original Development Timeline
 
@@ -126,7 +126,7 @@ Solo/
 | ---- | ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | 0-1  | Repo bootstrap         | ✅ Folder structure, Python environment, requirements, basic scripts                                                |
 | 2    | Core manager & logging | ✅ Event loop, JSON logger, event classes                                                                          |
-| 3    | LLM runner wrapper     | 🔄 Basic llama.cpp integration with GPU support, interactive CLI                                                    |
+| 3    | LLM runner wrapper     | ✅ llama.cpp integration with GPU support, interactive CLI, response sanitization                                   |
 | 4    | STT mini-pipeline      | ⏳ Integrate faster-whisper; audio input to text                                                                    |
 | 5    | TTS output             | ⏳ Piper inference; voice selection by config                                                                       |
 | 6    | API layer              | ⏳ FastAPI routes /chat /transcribe /status                                                                         |
