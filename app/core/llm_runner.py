@@ -135,11 +135,6 @@ class LlamaModel:
                 case "llama-3":
                     full_prompt = f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
                 case "mistral" | "mixtral":
-                    """full_prompt = (
-                        "<s>[INST]" f"{system_prompt}\n"
-                        "</s>\n[INST]\n"
-                        f"{prompt}\n[/INST]"
-                    )"""
                     full_prompt = f"[INST] <<SYS>>\n{system_prompt}\n<</SYS>>\n\n{prompt}\n[/INST]\n"
 
         stop = stop if stop is not None else self._default_stop()
