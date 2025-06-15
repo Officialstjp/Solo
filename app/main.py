@@ -7,7 +7,7 @@ History   :
     2025-06-08      Init
 
 """
-# For later, time spent (+ plan and doc work) = ~26h | last changed 12.06.2025, 23:00 curr daily = 2:00
+# For later, time spent (+ plan and doc work) = ~35h | last changed 14.06.2025, 23:00 curr daily = 6:00
 
 import asyncio
 import signal
@@ -140,7 +140,7 @@ async def main():
     # --- register componentes ---
     app.register_component(
         "llm_runner",
-        lambda: llm_runner_component(app.event_bus, app.config.model_path)
+        lambda: llm_runner_component(app.event_bus, app.config.model_path.lower(), app.config.prompt_format.lower())
     )
     app.register_component(
         "llm_tester",
