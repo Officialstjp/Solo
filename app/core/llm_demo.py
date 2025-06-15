@@ -1,6 +1,7 @@
 """
 Module: app/core/llm_demo.py
 Purpose: Simple CLI demo for testing the LLM runner
+Currently not functional due to the way imports handle
 History:
     Date            Notes
     2025-06-08      Init
