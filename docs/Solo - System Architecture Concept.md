@@ -1,4 +1,3 @@
-
 ## 1. Folder & File Layout
 
 ``` Text
@@ -8,6 +7,10 @@ Solo/
 │  ├─ config.py            # pydantic-based settings loader (.env / CLI flags)
 │  ├─ core/
 │  │   ├─ llm_runner.py    # llama.cpp / Ollama wrapper + caching
+│  │   ├─ model_manager.py # Model discovery and metadata extraction
+│  │   ├─ prompt_templates.py # Model-specific prompt formatting
+│  │   ├─ model_cache.py   # Response caching system
+│  │   ├─ model_info.py    # CLI tool for model inspection
 │  │   ├─ stt.py           # faster-whisper pipeline
 │  │   ├─ tts.py           # piper voice synth
 │  │   ├─ wake_word.py     # Porcupine hot-key / wake-word
@@ -28,6 +31,8 @@ Solo/
 │  └─ quantize.bat         # helper for gguf model conversion
 ├─ tests/                  # pytest unit + integration tests
 │  └─ …
+├─ cache/                  # response cache storage
+│  └─ llm_responses/
 ├─ requirements.txt / pyproject.toml
 ├─ .env.example            # sample secrets
 └─ .github/
@@ -37,33 +42,40 @@ Solo/
 
 **Why?**
 - ***app/*** is a **monorepo of micro-services** that can later be reused or split into docker images; the interface boundaries sit on the folder edges.
-- ***main.py*** owns the asnyc event oop, starts each module in a asyncio.create_task,
+- ***main.py*** owns the asnyc event loop, starts each module in a asyncio.create_task,
 	watches for crashes, and exposes health metrics through the FastAPI **/status** route
-- The UI is a sperate Streamlit process so it never blocks inference threads.
+- The UI is a separate Streamlit process so it never blocks inference threads.
 
 ---
 
 ## 2. Module Interfaces & Data-Flow
 
-- **Event Bus** – **events.py** defines small pydantic models (**STTEvent**, **LLMReply**, **ActionRequest**). All long-running services push / subscribe via an **asyncio.Queue**; this keeps cross-module coupling near zero.
+- **Event Bus** – **events.py** defines small pydantic models (**STTEvent**, **LLMRequestEvent**, **LLMResponseEvent**). All long-running services push / subscribe via an **asyncio.Queue**; this keeps cross-module coupling near zero.
 
-- **Speech I/O** – **stt.py** wraps _faster-whisper_ in **CTranslate2** for real-time transcription; **tts.py** calls _Piper_ for local, low-latency TTS voices on Windows.
+- **Model Manager** – **model_manager.py** discovers and catalogs GGUF models in the models directory, extracts metadata (size, quantization, format), and provides a clean interface for model selection and validation.
+
+- **Prompt Templates** – **prompt_templates.py** defines format-specific templates for different model families (Mistral, Llama, Phi, etc.), manages system prompts, and ensures consistent formatting and response sanitization.
+
+- **Response Cache** – **model_cache.py** provides in-memory and file-based caching for LLM responses to avoid redundant computation, with TTL-based expiration and cache management utilities.
+
+- **Speech I/O** – **stt.py** will wrap _faster-whisper_ in **CTranslate2** for real-time transcription; **tts.py** will call _Piper_ for local, low-latency TTS voices on Windows.
 
 - **Wake Word** – start with a PowerShell hot-key; later enable _Porcupine_ for always-on detection (lightweight, 7 kB RAM/core).
 
-- **LLM Runner** – two interchangeable back-ends:
-    1. **llama.cpp** built with cuBLAS on Windows (guide shows proper CMAKE_ARGS syntax).
+- **LLM Runner** – **llm_runner.py** now provides:
+    1. Integration with **llama.cpp** with cuBLAS GPU acceleration
+    2. Conversation history tracking for multi-turn interactions
+    3. Proper prompt formatting via the template system
+    4. Response caching for improved performance
+    5. Improved error handling and parameter management
 
-    2. **Ollama** via WSL-2; recent builds expose GPU to Docker after NVIDIA container-toolkit update.
-	A config flag selects which runtime.
+- **Memory / RAG** – memory.py will embed text → vectors and store them in **Chroma** (runs embedded SQLite by default; zero-ops).
 
-- **Memory / RAG** – memory.py embeds text → vectors and stores them in **Chroma** (runs embedded SQLite by default; zero-ops).
+- **Agent Layer** – agent_bus.py will wrap **CrewAI** to create multi-agent workflows (planning, critique, tool-use).
 
-- **Agent Layer** – agent_bus.py wraps **CrewAI** to create multi-agent workflows (planning, critique, tool-use).
+- **API** – server.py will be a **FastAPI** instance; REST routes will hand off work to main.py via the event bus, and long jobs will run in BackgroundTask helpers.
 
-- **API** – server.py is a **FastAPI** instance; REST routes hand off work to main.py via the event bus, and long jobs run in BackgroundTask helpers.
-
-- **Dashboard** – **dashboard_app.py** uses **Streamlit** to consume **/status** JSON and render live tokens-per-second, GPU memory, & recent dialogues.
+- **Dashboard** – **dashboard_app.py** will use **Streamlit** to consume **/status** JSON and render live tokens-per-second, GPU memory, & recent dialogues.
 
 ## 3. Technology Stack
 
@@ -72,28 +84,35 @@ Solo/
 | ---------------------- | -------------------------------------- | --------------------------------------- |
 | Lang runtime           | Python 3.11 (pyenv-win)                | Fast async, typing, mature ML libs      |
 | Centralized supervisor | asyncio + anyio, uvloop optional       | Lightweight process mgmt                |
-| STT                    | faster-whisper CUDA                    | GPU-acceralerated Whisper model         |
+| Model Management       | Custom ModelManager + PromptLibrary    | Auto-detection, metadata extraction     |
+| Response Caching       | In-memory + file-based cache           | Performance optimization                |
+| STT                    | faster-whisper CUDA                    | GPU-accelerated Whisper model          |
 | TTS                    | Piper                                  | Local voices, 50ms start latency        |
 | Wake Word              | Porcupine                              | 1 MB Model, cross-platform              |
 | LLM                    | llama.cpp (GGUF int4) or Ollama + GPTQ | Works in 8GB VRAM, up to 13B            |
 | Agent framework        | CrewAI                                 | Declarative multi-agent graphs          |
 | Vector DB              | Chroma                                 | Embedded, server-less, Python API       |
-| API                    | FastAPI + Uvicorn                      | Tpye hints, async, background tasks     |
+| API                    | FastAPI + Uvicorn                      | Type hints, async, background tasks     |
 | Dashboard              | Streamlit                              | 1-file reactive SPA for ops view        |
 | CI                     | Github Actions pytest template         | Free runners; sample workflow docs      |
 | Scripts                | Powershell 7                           | Native hot-key, easy Windows automation |
+
 ## 4. Implementation Status and Development Timeline
 
-### Current Status (as of June 14, 2025)
+### Current Status (as of August 2024)
 
 | Component               | Status                 | Notes                                                                                             |
 | ----------------------- | ---------------------- | ------------------------------------------------------------------------------------------------- |
-| Core Architecture       | ✅ Implemented         | Basic async event loop, component registration, and event bus communication                        |
-| Configuration           | ✅ Implemented         | Pydantic models for config with environment variable support                                       |
+| Core Architecture       | ✅ Implemented         | Async event loop, component registration, error handling, and event bus communication              |
+| Configuration           | ✅ Enhanced            | Pydantic models for config with validation, nested config objects, and smart defaults             |
 | Logging                 | ✅ Implemented         | Structured logging with JSON output option                                                         |
 | Event Bus               | ✅ Implemented         | Async event pub/sub system with typed event definitions                                            |
-| LLM Runner              | ✅ Implemented         | llama.cpp integration with GPU support, multiple model formats, response sanitization              |
-| CLI Tester              | ✅ Implemented         | Interactive CLI for testing LLM with system prompt support                                         |
+| Model Manager           | ✅ Implemented         | Auto-discovery of models, metadata extraction, model selection, and validation                     |
+| Prompt Templates        | ✅ Implemented         | Model-specific formatting, system prompts, sanitization, and template library                      |
+| Response Cache          | ✅ Implemented         | In-memory and file-based caching with TTL expiration                                               |
+| LLM Runner              | ✅ Enhanced            | llama.cpp integration with GPU support, conversation history, prompt templates, response caching   |
+| CLI Tester              | ✅ Enhanced            | Interactive CLI for testing LLM with parameter customization and conversation history              |
+| Model Info CLI          | ✅ Implemented         | CLI tool for inspecting available models and their metadata                                        |
 | STT Pipeline            | ⏳ Planned             | Not yet implemented                                                                               |
 | TTS Output              | ⏳ Planned             | Not yet implemented                                                                               |
 | API Layer               | ⏳ Planned             | Not yet implemented                                                                               |
@@ -111,38 +130,47 @@ Solo/
    - Create context-aware prompting
 
 2. **Short-term Roadmap**:
-   - Implement basic STT pipeline for audio input
-   - Add TTS output for spoken responses
-   - Begin API layer implementation
+   - Implement basic STT pipeline using faster-whisper
+   - Add TTS output using Piper for spoken responses
+   - Begin API layer implementation with FastAPI
 
 3. **Mid-term Goals**:
-   - Develop monitoring dashboard
-   - Implement agent orchestration
-   - Add wake-word detection
+   - Develop Streamlit monitoring dashboard
+   - Implement agent orchestration with CrewAI
+   - Add wake-word detection with Porcupine
 
-### Original Development Timeline
+### Development Timeline
 
 | Week | Milestone              | Deliverables                                                                                                        |
 | ---- | ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | 0-1  | Repo bootstrap         | ✅ Folder structure, Python environment, requirements, basic scripts                                                |
 | 2    | Core manager & logging | ✅ Event loop, JSON logger, event classes                                                                          |
 | 3    | LLM runner wrapper     | ✅ llama.cpp integration with GPU support, interactive CLI, response sanitization                                   |
-| 4    | STT mini-pipeline      | ⏳ Integrate faster-whisper; audio input to text                                                                    |
-| 5    | TTS output             | ⏳ Piper inference; voice selection by config                                                                       |
-| 6    | API layer              | ⏳ FastAPI routes /chat /transcribe /status                                                                         |
-| 7    | Dashboard v1           | ⏳ Streamlit panel reading /status                                                                                  |
-| 8    | Memory / RAG           | ⏳ Chroma embedded DB; similarity search                                                                            |
-| 9    | Agent bus              | ⏳ CrewAI integration                                                                                               |
-| 10   | Wake-word & packaging  | ⏳ Porcupine integration; installer scripts                                                                         |
+| 3-4  | LLM enhancements       | ✅ Model management, prompt templates, response caching, conversation history                                       |
+| 4-5  | Memory / RAG           | ⏳ Chroma embedded DB; similarity search; contextual retrieval                                                      |
+| 5-6  | STT mini-pipeline      | ⏳ Integrate faster-whisper; audio input to text                                                                    |
+| 6-7  | TTS output             | ⏳ Piper inference; voice selection by config                                                                       |
+| 7-8  | API layer              | ⏳ FastAPI routes /chat /transcribe /status                                                                         |
+| 8-9  | Dashboard v1           | ⏳ Streamlit panel reading /status                                                                                  |
+| 9-10 | Agent bus              | ⏳ CrewAI integration                                                                                               |
+| 10-11| Wake-word & packaging  | ⏳ Porcupine integration; installer scripts                                                                         |
 
-Note: The timeline may be adjusted based on progress and priority shifts. Currently focused on establishing core LLM functionality with a robust event-based architecture.
+Note: We've completed all the planned LLM functionality enhancements including model management, prompt engineering, and caching systems. The next phase focuses on Memory/RAG implementation to enable context-aware responses and document retrieval capabilities.
 
 
 ## 5. Environment & CI Details
-(provided by Chat, adjust later)
 
 - **Python setup** – use pyenv-win to install 3.11, then py -m venv .venv. Store dependencies in **pyproject.toml** (Poetry) or requirements.txt; pin torch, ctranslate2, llama-cpp-python (with --extra-index-url) for GPU builds.
 
 - **Pre-commit** – black, isort. Run in dev.ps1.
 
 - **Binary assets** – place GGUF models, Porcupine keyword files, Piper voices in models/ (git-ignored). Write a quantize.bat helper to convert .gguf from original checkpoints.
+
+- **Model Management** – Models are automatically detected in the models/ directory. The ModelManager provides:
+  1. Automatic discovery of GGUF models in the configured model directory
+  2. Metadata extraction from filenames (parameter size, quantization level, model family)
+  3. Model validation and selection based on user requirements
+  4. Support for models from multiple families (Mistral, Llama, Phi, Mixtral, TinyLlama)
+  5. Cache management for model information to avoid redundant file operations
+
+For detailed instructions on using the LLM features, refer to [USING_LLM_FEATURES.md](USING_LLM_FEATURES.md).
