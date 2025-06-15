@@ -24,6 +24,9 @@ llama_cpp.py
 models/
 models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
 
+docs/Mistral 7B LLM _ Prompt Engineering Guide.pdf
+/cache
+
 # ============= PYTHON SECTION =====================
 # Source: https://github.com/github/gitignore/blob/main/Python.gitignore
 # Byte-compiled / optimized / DLL files
@@ -221,4 +224,3 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
-docs/Mistral 7B LLM _ Prompt Engineering Guide.pdf
