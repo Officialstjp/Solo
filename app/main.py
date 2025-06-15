@@ -5,17 +5,21 @@ Params    : None
 History   :
     Date            Notes
     2025-06-08      Init
+    2025-06-15      Updated to use enhanced model management
 
 """
-# For later, time spent (+ plan and doc work) = ~35h | last changed 14.06.2025, 23:00 curr daily = 6:00
 
 import asyncio
 import signal
 import sys
 from typing import Dict, List, Callable, Coroutine, Any
+import os
+from pathlib import Path
 
 from core.llm_runner import llm_runner_component
 from core.llm_tester import llm_tester_component
+from core.model_manager import ModelManager
+from core.prompt_templates import PromptLibrary
 from utils.logger import setup_logger
 from utils.events import EventBus, EventType
 from config import AppConfig
@@ -34,7 +38,16 @@ class SoloApp:
             log_file=self.config.log_file
         )
 
-        # Intitialize event bus
+        # Initialize model manager
+        self.model_manager = ModelManager(
+            models_dir=self.config.get_models_dir(),
+            default_model=self.config.llm.model_path
+        )
+
+        # Initialize prompt library
+        self.prompt_library = PromptLibrary()
+
+        # Initialize event bus
         self.event_bus = EventBus()
 
         # Store running tasks
@@ -47,6 +60,15 @@ class SoloApp:
         self._setup_signal_handlers()
 
         self.logger.info("Initialization complete.")
+
+        # Log available models
+        models = self.model_manager.list_available_models()
+        if models:
+            self.logger.info(f"Found {len(models)} models:")
+            for model in models:
+                self.logger.info(f"  - {model.name} ({model.parameter_size}, {model.quantization})")
+        else:
+            self.logger.warning("No models found. Please check your models directory.")
 
     def _setup_signal_handlers(self):
         """ Setup signal handlers for graceful shutdown """
@@ -128,7 +150,7 @@ class SoloApp:
         if self.tasks:
             await asyncio.gather(*self.tasks, return_exceptions=True)
 
-        self.logger.info ("Shutdown complete")
+        self.logger.info("Shutdown complete")
 
         return True
 
@@ -137,14 +159,31 @@ async def main():
     """ Main entry point for the application """
     app = SoloApp()
 
-    # --- register componentes ---
+    # Default to first available model if none specified
+    model_path = app.config.llm.model_path
+    if not model_path:
+        default_model = app.model_manager.get_default_model()
+        if default_model:
+            model_path = default_model.path
+            app.logger.info(f"Using default model: {default_model.name}")
+        else:
+            app.logger.error("No model specified and no models found. Cannot continue.")
+            return
+
+    # --- register components ---
     app.register_component(
         "llm_runner",
-        lambda: llm_runner_component(app.event_bus, app.config.model_path.lower(), app.config.prompt_format.lower())
+        lambda: llm_runner_component(
+            event_bus=app.event_bus,
+            model_path=model_path,
+            prompt_template=app.config.llm.prompt_template,
+            cache_enabled=app.config.llm.cache_enabled
+        )
     )
+
     app.register_component(
         "llm_tester",
-        lambda: llm_tester_component(app.event_bus)
+        lambda: llm_tester_component(app.event_bus, app.config.default_system_prompt)
     )
 
     await app.startup()
