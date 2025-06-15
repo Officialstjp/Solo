@@ -17,15 +17,15 @@ class AppConfig(BaseModel):
     """ Configuration for Solo """
 
     # Logging configuration
-    log_level: str= Field(default="INFO")
+    log_level: str= Field(default="DEBUG") # DEBUG
     json_logs: bool = Field(default=True)
     log_file: Optional[str] = None
 
     # LLM configuration
     llm_backend: str = Field(default="llama.cpp") # or "ollama"
     #model_path: Optional[str] = r"D:\data\models\tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf" # ~650MB
-    model_path: Optional[str] = r"D:\data\models\mistral-7b-v0.1.Q4_0.gguf" # ~4GB
-    #model_path: Optional[str] = r"D:\data\models\mistral-7b-instruct-v0.2.Q5_K_M.gguf" # ~5GB
+    #model_path: Optional[str] = r"D:\data\models\mistral-7b-v0.1.Q4_0.gguf" # ~4GB
+    model_path: Optional[str] = r"D:\data\models\mistral-7b-instruct-v0.2.Q5_K_M.gguf" # ~5GB
     #model_path: Optional[str] = r"D:\data\models\Meta-Llama-3-8B-Instruct-Q5_K_M.gguf" # ~6GB
     #model_path: Optional[str] = r"D:\data\models\phi-4-Q4_0.gguf" # ~8,1GB
     prompt_format: str = Field(default="mistral")
