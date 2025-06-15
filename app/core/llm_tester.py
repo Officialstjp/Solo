@@ -12,9 +12,20 @@ from utils.logger import setup_logger
 from utils.events import EventBus, EventType, LLMRequestEvent, LLMResponseEvent
 
 SETTINGS = {
-    "system_prompt": """You are a helpful AI assistant called Solo.
-Provide clear, accurate, and concise responses to questions.
-If you don't know something, say so rather than making up information."""
+    "system_prompt_mistral":
+    """
+    <s>[INST] You are a helpful code assistant. Your task is to generate a valid JSON object based on the given information. So for instance the following:
+        name: John, lastname: Smith, address: #1 Samuel St.
+    would be converted to:[/INST]
+    {
+    "address": "#1 Samuel St.",
+    "lastname": "Smith",
+    "name": "John"
+    }
+    </s>""",
+    "system_prompt_def": """You are a helpful AI assistant called Solo.
+    Provide clear, accurate, and concise responses to questions.
+    If you don't know something, say so rather than making up information."""
 }
 
 async def llm_tester_component(event_bus: EventBus):
@@ -31,11 +42,11 @@ async def llm_tester_component(event_bus: EventBus):
     )
 
     print("\n=== Default System Prompt ===")
-    print(SETTINGS["system_prompt"])
+    print(SETTINGS["system_prompt_mistral"])
     print("=============================\n")
 
     use_default = await aioconsole.ainput(f"Use default system prompt? (Y/n): ")
-    system_prompt = SETTINGS["system_prompt"] if use_default.lower() in ('', 'y', 'yes') else None
+    system_prompt = SETTINGS["system_prompt_mistral"] if use_default.lower() in ('', 'y', 'yes') else None
 
     if use_default.lower() in ('', 'y', 'yes'):
         print("Using default system prompt.")
@@ -71,10 +82,10 @@ async def llm_tester_component(event_bus: EventBus):
                     continue
 
                 if prompt.lower() == 'system':
-                    print(f"\n=== Current system prompt ===\n{SETTINGS['system_prompt']}")
+                    print(f"\n=== Current system prompt ===\n{SETTINGS['system_prompt_mistral']}")
                     new_prompt = await aioconsole.ainput("\nEnter new system prompt (or press Enter to keep currenrt):")
                     if new_prompt.strip():
-                        SETTINGS["system_prompt"] = new_prompt
+                        SETTINGS["system_prompt_mistral"] = new_prompt
                         print("- System prompt updated. -")
 
                 if not prompt.strip():
