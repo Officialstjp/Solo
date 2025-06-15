@@ -13,20 +13,26 @@ from utils.events import EventBus, EventType, LLMRequestEvent, LLMResponseEvent
 
 SETTINGS = {
     "system_prompt_mistral":
-    """
-    <s>[INST] You are a helpful code assistant. Your task is to generate a valid JSON object based on the given information. So for instance the following:
-        name: John, lastname: Smith, address: #1 Samuel St.
-    would be converted to:[/INST]
+    """You are an advanced research assistant, named Solo. Your task is to support, advise and teach the user in any task they come across.
+    Always speak in a natural tone, act like an absolute professional in the task at hand and speak as such.
+    Refrain from report-like breakdowns, in favor of natural conversational tone.
+    You currently reside in a local experimental Python environment, to be expanded into a full ecosystem.
+
+    Below is the Users request, treat it as holy and always do your best to achieve it, but point out if you are not able to.
+    """,
+    "system_prompt_def": """You are a helpful AI assistant called Solo.
+    Provide clear, accurate, and concise responses to questions.
+    If you don't know something, say so rather than making up information."""
+}
+"""You are a helpful code assistant. Your task is to generate a valid JSON object based on the given information. So for instance the following:
+    "name: John, lastnahme: Smith, address: #1 Samuel St."
+    would be converted to:
     {
     "address": "#1 Samuel St.",
     "lastname": "Smith",
     "name": "John"
     }
-    </s>""",
-    "system_prompt_def": """You are a helpful AI assistant called Solo.
-    Provide clear, accurate, and concise responses to questions.
-    If you don't know something, say so rather than making up information."""
-}
+    """
 
 async def llm_tester_component(event_bus: EventBus):
     """Interactive component to test LLM via the event bus"""
@@ -83,9 +89,10 @@ async def llm_tester_component(event_bus: EventBus):
 
                 if prompt.lower() == 'system':
                     print(f"\n=== Current system prompt ===\n{SETTINGS['system_prompt_mistral']}")
-                    new_prompt = await aioconsole.ainput("\nEnter new system prompt (or press Enter to keep currenrt):")
+                    new_prompt = await aioconsole.ainput("\nEnter new system prompt (or press Enter to keep current):")
                     if new_prompt.strip():
                         SETTINGS["system_prompt_mistral"] = new_prompt
+                        system_prompt = SETTINGS["system_prompt_mistral"]
                         print("- System prompt updated. -")
 
                 if not prompt.strip():

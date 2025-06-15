@@ -73,7 +73,8 @@ class LlamaModel:
             case "llama-3":
                 return ["<|eot_id|>"]
             case "mistral" | "mixtral":
-                return ["</s>","[/INST"]
+                #return ["</s>", "[/OUT]"]
+                return ["</s>"]
             case "tinyllama":
                 return ["<|assistant|>"]
             case _:
@@ -86,6 +87,29 @@ class LlamaModel:
 
             case "mixtral_sys":
             """
+
+    def _sanitize_response(self, response: str) -> str:
+        """Clean up the model response based on model format"""
+
+        match self.prompt_format.lower():
+            case "mistral" | "mixtral":
+                # Look for [OUT] marker in Mistral responses
+                if "[OUT]" in response:
+                    parts = response.split("[OUT]", 1)
+                    if len(parts) > 1:
+                        return parts[1].strip()
+
+                # If no [OUT] marker, try to extract response after the [/INST] tag
+                if "[/INST]" in response:
+                    parts = response.split("[/INST]", 1)
+                    if len(parts) > 1:
+                        return parts[1].strip()
+
+                # If nothing else works, return the raw response
+                return response.strip()
+
+            case _:
+                return response.strip()
 
     async def generate(
             self,
@@ -110,15 +134,18 @@ class LlamaModel:
                     full_prompt = f"<|im_start|>system<|im_sep|>\n{system_prompt}<|im_end|>\n<|im_start|>user<|im_sep|>\n{prompt}<|im_end|>\n<|im_start|>assistant<|im_sep|>"
                 case "llama-3":
                     full_prompt = f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
-                case "mistral":
-                    #full_prompt = f"[INST] <<SYS>>\n{system_prompt}\n<</SYS>>\n\n{prompt}\n[/INST]"
-                    full_prompt = f"{system_prompt}[INST]\n{prompt}\n[/INST]"
-                case "mixtral":
-                    full_prompt = f"[INST] <<SYS>>\n{system_prompt}\n<</SYS>>\n\n{prompt}\n"#[/INST]"
+                case "mistral" | "mixtral":
+                    """full_prompt = (
+                        "<s>[INST]" f"{system_prompt}\n"
+                        "</s>\n[INST]\n"
+                        f"{prompt}\n[/INST]"
+                    )"""
+                    full_prompt = f"[INST] <<SYS>>\n{system_prompt}\n<</SYS>>\n\n{prompt}\n[/INST]\n"
 
         stop = stop if stop is not None else self._default_stop()
-        print(f"======== FULL PROMPT ========\n{full_prompt}")
-        print(f"======== STOP ========\n{stop}")
+        self.logger.debug(f"Full prompt: {full_prompt}")
+        self.logger.debug(f"Stop tokens: {stop}")
+
 
         # run in a sepearate thread to avoid blocking the event loop
         start_time = time.time()
@@ -135,12 +162,14 @@ class LlamaModel:
                 stream=stream,
             )
         )
-        print(f"============== RESPONSE ================\n{response}")
+        self.logger.debug(f"Raw response: {response}")
 
         generation_time = time.time() - start_time
         tokens_used = response.get("usage", {}).get("total_tokens", 0)
 
         result = response.get("choices", [{}])[0].get("text", "")
+
+        result = self._sanitize_response(result)
 
         self.logger.info(
             f"Generated {tokens_used} tokens in {generation_time:.2f}s"
