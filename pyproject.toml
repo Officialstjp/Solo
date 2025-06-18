@@ -7,8 +7,8 @@ package-mode = false
 
 [tool.poetry.dependencies]                              # - Runtime
 python = ">=3.11,<=3.13"
-fastapi = "0.109.2"                                    # Web Api
-uvicorn = {extras = ["standard"], version = "^0.30"}    # ion even know
+fastapi = "0.109.2"                                     # FastAPI
+uvicorn = {extras = ["standard"], version = "^0.30"}    # WebServer for FastAPI, could be handled by "fastapi[standard]"
 streamlit = "^1.35"                                     # dashboard
 llama-cpp-python = {version="^0.2.70", extras=["cuda"]} # GPU LLM backend
 ctranslate2 = {version = "^4.4"}                        # faster-whisper core
