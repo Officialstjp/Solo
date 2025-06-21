@@ -8,7 +8,8 @@ History   :
     2025-06-15      Updated to use enhanced model management
 
 """
-# time: about 50h, 15.06.25 23:59
+# time: about 61h, 21.06.25 18:00, curr daily: 2:30
+# continue with router integration and main server setup (step 5), then fill in placeholders and flesh out
 
 import asyncio
 import signal
