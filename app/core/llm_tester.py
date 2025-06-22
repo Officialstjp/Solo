@@ -13,7 +13,7 @@ from datetime import datetime
 import aioconsole
 import os
 
-from utils.logger import setup_logger
+from utils.logger import get_logger
 from utils.events import EventBus, EventType, LLMRequestEvent, LLMResponseEvent
 
 DEFAULT_SYSTEM_PROMPT = """You are an advanced research assistant, named Solo. Your task is to support, advise and teach the user in any task they come across.
@@ -27,7 +27,7 @@ Below is the Users request, treat it as holy and always do your best to achieve 
 async def llm_tester_component(event_bus: EventBus, default_system_prompt: str = None):
     """Interactive component to test LLM via the event bus"""
 
-    logger = setup_logger()
+    logger = get_logger("main")
     logger.info("Starting LLM tester component")
 
     active_requests = set()
@@ -192,7 +192,7 @@ async def llm_tester_component(event_bus: EventBus, default_system_prompt: str =
 
 async def response_listener(event_bus: EventBus, active_requests: set, response_events: dict):
     """ Listen for LLM responses and add them to the queue """
-    logger = setup_logger()
+    logger = get_logger("main")
 
     async for event in event_bus.subscribe(EventType.LLM_RESPONSE):
         if isinstance(event, LLMResponseEvent):

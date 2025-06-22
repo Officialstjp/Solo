@@ -17,7 +17,7 @@ from pathlib import Path
 from core.llm_runner import LlamaModel
 from core.model_manager import ModelManager
 from core.prompt_templates import PromptLibrary
-from utils.logger import setup_logger
+from utils.logger import get_logger
 
 async def main():
     """Simple CLI demo for testing the LLM directly"""
@@ -33,7 +33,7 @@ async def main():
     parser.add_argument('--max-tokens', type=int, default=512, help='Max tokens to generate (default: 512)')
     args = parser.parse_args()
 
-    logger = setup_logger(json_format=False)
+    logger = get_logger(name = "LLM_demo", json_format=False)
 
     # Set up model manager and prompt library
     model_manager = ModelManager()

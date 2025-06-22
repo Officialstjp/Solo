@@ -22,9 +22,12 @@ from core.llm_runner import llm_runner_component
 from core.llm_tester import llm_tester_component
 from core.model_manager import ModelManager
 from core.prompt_templates import PromptLibrary
-from utils.logger import setup_logger
+from utils.logger import get_logger
 from utils.events import EventBus, EventType
+from api.server import app as api_app
+import uvicorn
 from config import AppConfig
+
 
 class SoloApp:
     """ Main application for Solo """
@@ -34,7 +37,7 @@ class SoloApp:
         self.config = AppConfig(config_path)
 
         # Setup logger
-        self.logger = setup_logger(
+        self.logger = get_logger(name = "main",
             log_level=self.config.log_level,
             json_format=self.config.json_logs,
             log_file=self.config.log_file
@@ -156,6 +159,20 @@ class SoloApp:
 
         return True
 
+async def run_api_server(event_bus, model_manager, config):
+    """Run the API server as a background process """
+    from api.server import set_globals
+    set_globals(event_bus, model_manager, config)
+
+    config = uvicorn.Config(
+        api_app,
+        host="0.0.0.0",
+        port=config.api_port,
+        log_level="info"
+    )
+    server = uvicorn.Server(config)
+    await server.serve() # girlboss
+
 
 async def main():
     """ Main entry point for the application """
@@ -186,6 +203,11 @@ async def main():
     app.register_component(
         "llm_tester",
         lambda: llm_tester_component(app.event_bus, app.config.default_system_prompt)
+    )
+
+    app.register_component(
+        "api_server",
+        lambda: run_api_server(app.event_bus, app.model_manager, app.config)
     )
 
     await app.startup()

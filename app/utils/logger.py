@@ -12,6 +12,8 @@ import structlog
 from typing import Optional, Dict, Any
 import logging
 
+_loggers = {}
+
 def setup_logger(
         log_level: str = "INFO",
         json_format: bool = True,
@@ -55,4 +57,14 @@ def setup_logger(
         file_handler.setFormatter(logging.Formatter("%(message)s"))
         logging.getLogger().addHandler(file_handler)
 
+    return logger
+
+def get_logger(name: str = None, **logger_config) -> structlog.stdlib.BoundLogger:
+    """ Get or create a logger with the given name and configuration """
+    global _loggers
+    if name in _loggers:
+        return _loggers[name]
+
+    logger = setup_logger(**logger_config)
+    _loggers[name] = logger
     return logger

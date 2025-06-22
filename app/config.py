@@ -10,10 +10,16 @@ History   :
 """
 
 from pydantic import BaseModel, Field, validator
+from utils.logger import get_logger
 from typing import Optional, Dict, List, Any
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+
+
+logger = get_logger("main")
+
+_config_instance = None
 
 class LLMConfig(BaseModel):
     """ Configuration for LLM models """
@@ -178,3 +184,10 @@ class AppConfig(BaseModel):
         # Resolve relative to project root
         base_dir = Path(__file__).resolve().parent.parent
         return str(base_dir / self.models_dir)
+
+def get_config():
+    logger.info("Not yet implemented")
+
+def update_config():
+    # TODO
+    logger.info("Not yet implemented")

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from core.model_manager import ModelManager, ModelInfo, ModelFormat
-from utils.logger import setup_logger
+from utils.logger import get_logger
 
 def print_model_info(model_info: ModelInfo, verbose: bool = False):
     """Print information about a model
@@ -52,8 +52,6 @@ async def main():
     parser.add_argument('--model', type=str, help='Specific model to show info for')
     parser.add_argument('--verbose', '-v', action='store_true', help='Show detailed information')
     args = parser.parse_args()
-
-    logger = setup_logger(json_format=False)
 
     # Initialize model manager
     model_manager = ModelManager(models_dir=args.models_dir)

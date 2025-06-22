@@ -18,7 +18,7 @@ from pathlib import Path
 import uuid
 
 from llama_cpp import Llama
-from utils.logger import setup_logger
+from utils.logger import get_logger
 from utils.events import EventBus, EventType, LLMRequestEvent, LLMResponseEvent
 from core.model_manager import ModelManager, ModelInfo, ModelFormat
 from core.prompt_templates import PromptLibrary, PromptTemplate
@@ -43,7 +43,7 @@ class LlamaModel:
             verbose: bool = False,
     ):
         """ Initialize the LLM model """
-        self.logger = setup_logger()
+        self.logger = get_logger("main")
         self.logger.info(f"Initializing LlamaModel with model: {model_path}")
 
         if not os.path.exists(model_path):
@@ -226,7 +226,7 @@ class LLMRunner:
         cache_enabled: bool = True
     ):
         """ Initialize the LLM runner component """
-        self.logger = setup_logger()
+        self.logger = get_logger("main")
         self.event_bus = event_bus
         self.model_path = model_path
         self.model = None
