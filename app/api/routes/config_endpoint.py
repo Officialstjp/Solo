@@ -21,7 +21,7 @@ class ConfigUpdateResponse(BaseModel):
     message: str
 
 @router.get("", response_model=ConfigResponse)
-async def get_config():
+async def get_configuration():
     """ Get the current configuration """
     config_dict = config.dict()
 
