@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-
 from app.api.server import model_manager, logger
 
 router = APIRouter(prefix="/models", tags=["Models"])
@@ -27,6 +26,7 @@ class ModelResponse(BaseModel):
 @router.get("/list", response_model=List[ModelInfo])
 async def list_models():
     """ List all available models """
+
     if not model_manager:
         raise HTTPException(status_code=500, detail="Model manager not initialized")
 
