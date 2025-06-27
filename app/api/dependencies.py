@@ -9,16 +9,21 @@ from app.core.prompt_templates import PromptLibrary
 from app.config import AppConfig
 
 async def get_config(request: Request) -> AppConfig:
+    """ Get the application Config forom app state """
     return request.app.state.config
 
 async def get_event_bus(request: Request) -> EventBus:
+    """ Get the event bus instance from app state """
     return request.app.state.event_bus
 
 async def get_model_manager(request: Request) -> ModelManager:
+    """ Get the model manager instance from app state """
     return request.app.state.model_manager
 
 async def get_prompt_library(request: Request) -> PromptLibrary:
+    """ Get the prompt library instance from app state """
     return request.app.state.prompt_library
 
 async def get_metrics(request: Request) -> dict:
+    """ Get the metrics dictionary from app state """
     return request.app.state.metrics
