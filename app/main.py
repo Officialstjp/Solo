@@ -8,7 +8,7 @@ History   :
     2025-06-15      Updated to use enhanced model management
 
 """
-# time: about 61h, 21.06.25 18:00, curr daily: 2:30
+# time: about 75h, 28.06.25 18:00, curr daily: 3:00
 # continue with router integration and main server setup (step 5), then fill in placeholders and flesh out
 
 import asyncio
@@ -24,7 +24,6 @@ from core.model_manager import ModelManager
 from core.prompt_templates import PromptLibrary
 from utils.logger import get_logger
 from utils.events import EventBus, EventType
-from api.server import app as api_app
 import uvicorn
 from config import AppConfig
 
@@ -160,19 +159,35 @@ class SoloApp:
         return True
 
 async def run_api_server(event_bus, model_manager, config):
-    """Run the API server as a background process """
-    from api.server import set_globals
-    set_globals(event_bus, model_manager, config)
+    """
+    Run the API server using the application factory
 
+    Args:
+        event_bus: The event bus instance
+        model_manager: The model manager instance
+        config: The application configuration
+    """
+    from app.api.factory import create_app
+    import uvicorn
+    import asyncio
+
+    logger = get_logger("APIServer")
+    logger.info(f"Starting API server on port {config.api_port}")
+
+    # Create the FastAPI app using the factory
+    app = create_app()
+
+    # Configure uvicorn server
     config = uvicorn.Config(
-        api_app,
+        app=app,
         host="0.0.0.0",
         port=config.api_port,
         log_level="info"
     )
-    server = uvicorn.Server(config)
-    await server.serve() # girlboss
 
+    server = uvicorn.Server(config)
+
+    await server.serve() # girlboss
 
 async def main():
     """ Main entry point for the application """
@@ -192,22 +207,34 @@ async def main():
     # --- register components ---
     app.register_component(
         "llm_runner",
-        lambda: llm_runner_component(
-            event_bus=app.event_bus,
-            model_path=model_path,
-            prompt_template=app.config.llm.prompt_template,
-            cache_enabled=app.config.llm.cache_enabled
-        )
+        llm_runner_component,
+        event_bus=app.event_bus,
+        model_path=model_path,  # Use the actual model path
+        prompt_template=app.config.llm.prompt_template if hasattr(app.config.llm, 'prompt_template') else None,
+        cache_enabled=app.config.llm.cache_enabled
+    )
+
+    # Create and register the model service
+    from app.core.model_service import ModelService
+
+    model_service = ModelService(
+        event_bus=app.event_bus,
+        model_manager=app.model_manager,
+        default_model_id=os.path.basename(model_path),  # Use the basename as the ID
+        max_models=app.config.llm.max_loaded_models if hasattr(app.config.llm, 'max_loaded_models') else 2
     )
 
     app.register_component(
-        "llm_tester",
-        lambda: llm_tester_component(app.event_bus, app.config.default_system_prompt)
+        "model_service",
+        model_service.initialize
     )
 
     app.register_component(
         "api_server",
-        lambda: run_api_server(app.event_bus, app.model_manager, app.config)
+        run_api_server,
+        event_bus=app.event_bus,
+        model_manager=app.model_manager,
+        config=app.config
     )
 
     await app.startup()
