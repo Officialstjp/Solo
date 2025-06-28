@@ -1,50 +1,65 @@
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
-from app.api.server import model_manager, logger
+from fastapi import APIRouter, HTTPException, Depends, FastAPI
+from typing import List, Dict, Any
 
-router = APIRouter(prefix="/models", tags=["Models"])
+from app.core.model_manager import ModelManager
+from app.api.dependencies import get_model_manager
+from app.utils.logger import get_logger
 
-class ModelInfo(BaseModel):
-    name: str
-    path: str
-    format: str
-    parameter_size: str
-    quantization: str
-    context_length: str
-    file_size_mb: str
+logger = get_logger(name="Models_API", json_format=False)
 
-class ModelSelectionRequest(BaseModel):
-    model_path: str
 
-class ModelResponse(BaseModel):
-    status: str
-    message: str
-    model: Optional[ModelInfo] = None
 
+def create_router(app: FastAPI) -> APIRouter:
+    """
+    Create and configure the models router
+    Args:
+        App: the FastAPI application instance
+    Returns:
+        APIRouter: Configured router with model endpoints
+    """
+    router = APIRouter(prefix="/models", tags=["Models"])
+
+    @router.get("/list", response_model=List[Dict[str, any]])
+    async def list_models(
+        model_manager: ModelManager = Depends(get_model_manager)
+    ):
+        try:
+            models = model_manager.get_models()
+            return models
+        except Exception as e:
+            logger.error(f"Error listing models")
+            raise HTTPException(status_code=500, detail=(f"Failed to list models: {str(e)}"))
+
+    @router.get("/{model_id}")
+    async def get_model(
+        model_id: str,
+        model_manager: ModelManager = Depends(get_model_manager)
+    ):
+        try:
+            model = model_manager.get_model(model_id)
+            if not model:
+                raise HTTPException(status_code=404, detail=(f"Model {model_id} not found"))
+            return model
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error getting model {model_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to get model: {str(e)}")
+
+    """
+    Add other endpoints as needed
+    @router.get("/[keyword]/[Keyword]", response_model=[defined response model])
+    @router.post("/... ", ...)
+    async def [function name](
+            dependency: [Class] = Depends([func]) # <- funcs defined in dependencies.py
+            )
+
+    """
+
+    return router
+
+# ================= OLD =========================
 # Endpoints
-@router.get("/list", response_model=List[ModelInfo])
-async def list_models():
-    """ List all available models """
-
-    if not model_manager:
-        raise HTTPException(status_code=500, detail="Model manager not initialized")
-
-    models = model_manager.list_available_models()
-
-    result = []
-    for model in models:
-        result.append(ModelInfo(
-            name=model.name,
-            path=model.path,
-            format=model.format.value,
-            parameter_size=model.parameter_size,
-            quantization=model.quantization,
-            context_length=model.context_length,
-            file_size_mb=model.file_size_mb
-        ))
-
-    return result
 
 @router.get("/info/{model_name}", response_model=ModelResponse)
 async def get_model_info(model_name: str):
