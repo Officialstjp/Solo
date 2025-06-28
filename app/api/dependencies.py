@@ -5,6 +5,7 @@ Purpose     : Dependecy injection functions for FastAPI routes
 from fastapi import Depends, Request
 from app.utils.events import EventBus
 from app.core.model_manager import ModelManager
+from app.core.model_service import ModelService
 from app.core.prompt_templates import PromptLibrary
 from app.config import AppConfig
 
@@ -19,6 +20,10 @@ async def get_event_bus(request: Request) -> EventBus:
 async def get_model_manager(request: Request) -> ModelManager:
     """ Get the model manager instance from app state """
     return request.app.state.model_manager
+
+async def get_model_service(request: Request) -> ModelService:
+    """Get the model service instance from app state"""
+    return request.app.state.model_service
 
 async def get_prompt_library(request: Request) -> PromptLibrary:
     """ Get the prompt library instance from app state """
