@@ -48,7 +48,7 @@ class ModelService:
 
         # state
         self.models: Dict[str, LlamaModel] = {} # model_id -> model
-        self.model_last_used: Dict[str, float] # model_id -> timestamp
+        self.model_last_used: Dict[str, float] = {} # model_id -> timestamp
         self.loading_models: Set[str] = set() # set of models currently being loaded
 
         self.maintenance_task = None
@@ -59,7 +59,7 @@ class ModelService:
 
         asyncio.create_task(self._listen_for_model_events()) # start listenting for model events
 
-        self.maintenance_task = asnycio.create_task(self._run_maintenance())
+        self.maintenance_task = asyncio.create_task(self._run_maintenance())
 
         await self.get_model(self.default_model_id)
 
@@ -101,7 +101,7 @@ class ModelService:
             self.logger.info(f"Recieved request to load model: {model_id} (priority: {priority})")
             model = await self.get_model(model_id, priority=priority)
 
-            model_info = self.model_manager.get_model(model_id)
+            model_info = self.model_manager(model_id)
             await self.event_bus.publish(ModelLoadedEvent(
                 model_id=model_id,
                 success=True,
@@ -190,6 +190,13 @@ class ModelService:
 
         model_id, _ = sorted_models[0]
         await self._unload_model(model_id, reason="lru")
+
+    async def _listen_for_model_events(self):
+        """Listen for model-related events"""
+        async for event in self.event_bus.subscribe(EventType.MODEL_LOAD_REQUEST):
+            if isinstance(event, ModelLoadRequestEvent):
+                # Handle in background to not block event processing
+                asyncio.create_task(self._handle_model_load_request(event))
 
     async def _unload_model(self, model_id: str, reason: str):
         """
