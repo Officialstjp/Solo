@@ -19,10 +19,11 @@ import uuid
 
 from llama_cpp import Llama
 from utils.logger import get_logger
-from utils.events import EventBus, EventType, LLMRequestEvent, LLMResponseEvent
+from utils.events import EventBus, EventType, LLMRequestEvent, LLMResponseEvent, SessionClearEvent
 from core.model_manager import ModelManager, ModelInfo, ModelFormat
 from core.prompt_templates import PromptLibrary, PromptTemplate
 from core.model_cache import ResponseCache
+from core.model_service import ModelService
 
 class LlamaModel:
     """ Wrapper for llama.cpp model inference """
@@ -218,38 +219,46 @@ class LLMRunner:
     def __init__(
         self,
         event_bus: EventBus,
-        model_path: str,
-        model_manager: Optional[ModelManager] = None,
+        model_service: ModelService,
+        default_model_id: str,
         prompt_library: Optional[PromptLibrary] = None,
-        prompt_template: Optional[str] = None,
         cache_dir: Optional[str] = None,
         cache_enabled: bool = True
     ):
-        """ Initialize the LLM runner component """
-        self.logger = get_logger("main")
+        """
+        Initialize the LLM runner component
+
+        Args:
+            event_bus: Event bus for communication
+            model_service: Service for managing models
+            default_model_id: ID of the default model
+            prompt_library: Library of prompt templates
+            cache_dir: Directory for response caching
+            cache_enabled: Whether to enable response caching
+        """
+        self.logger = get_logger("LLMRunner")
         self.event_bus = event_bus
-        self.model_path = model_path
-        self.model = None
-        self.model_manager = model_manager or ModelManager()
+        self.model_service = model_service
         self.prompt_library = prompt_library or PromptLibrary()
-        self.prompt_template = prompt_template
         self.cache_dir = cache_dir
         self.cache_enabled = cache_enabled
 
         # Create a session map to track ongoing conversations
         self.sessions: Dict[str, List[Dict[str, str]]] = {}
 
+        self.cache = None
+        if cache_enabled:
+            self.cache = ResponseCache(
+                cache_dir=cache_dir,
+                enabled=cache_enabled
+            )
+
     async def initialize(self):
         """ Initialize the LLM model """
         self.logger.info("Intitializing LLM runner...")
-        self.model = LlamaModel(
-            model_path=self.model_path,
-            model_manager=self.model_manager,
-            prompt_library=self.prompt_library,
-            prompt_template=self.prompt_template,
-            cache_dir=self.cache_dir,
-            cache_enabled=self.cache_enabled
-        )
+
+        await self.model_service.initialize()
+
         self.logger.info("LLM runner initialized")
 
     async def run(self):
@@ -258,115 +267,153 @@ class LLMRunner:
 
         self.logger.info("Starting LLM runner loop")
 
+        # Create tasks for different event types
+        llm_request_task = asyncio.create_task(self._handle_llm_requests())
+        session_clear_task = asyncio.create_task(self._handle_session_clears())
+
+        # Wait for all tasks to complete (they shouldn't unless there's an error)
+        await asyncio.gather(
+            llm_request_task,
+            session_clear_task
+        )
+
+    async def _handle_llm_requests(self):
+        """ Handle LLM request events """
         async for event in self.event_bus.subscribe(EventType.LLM_REQUEST):
-            if isinstance(event, LLMRequestEvent):
-                self.logger.info(f"Received LLM request: session_id={event.session_id}")
+                if isinstance(event, LLMRequestEvent):
+                    asyncio.create_task(self._process_llm_request(event)) # procss in background
 
-                try:
-                    # Get or create session history
-                    session_id = event.session_id or str(uuid.uuid4())
-                    if session_id not in self.sessions:
-                        self.sessions[session_id] = []
+    async def _handle_session_clears(self):
+        """ Handle session clear events """
+        async for event in self.event_bus.subscribe(EventType.SESSION_CLEAR):
+                if isinstance(event, SessionClearEvent):
+                    asyncio.create_task(self._clear_session(event.session_id))
 
-                    # Add user message to history
-                    self.sessions[session_id].append({
-                        "role": "user",
-                        "content": event.prompt
-                    })
-
-                    # Get chat history if maintain_history is requested
-                    chat_history = None
-                    if event.parameters.get("maintain_history", True):
-                        chat_history = self.sessions[session_id]
-
-                    # Generate response
-                    response, metrics = await self.model.generate(
-                        prompt=event.prompt,
-                        system_prompt=event.system_prompt,
-                        chat_history=chat_history,
-                        max_tokens=event.parameters.get("max_tokens", 512),
-                        temperature=event.parameters.get("temperature", 0.7),
-                        top_p=event.parameters.get("top_p", 0.95),
-                        stop=event.parameters.get("stop", None),
-                        use_cache=event.parameters.get("use_cache", True),
-                    )
-
-                    # Add assistant response to history
-                    self.sessions[session_id].append({
-                        "role": "assistant",
-                        "content": response
-                    })
-
-                    # Limit history length
-                    max_history = event.parameters.get("max_history", 10)
-                    if len(self.sessions[session_id]) > max_history * 2:  # *2 because each exchange is 2 messages
-                        # Keep first message (usually system) and trim older messages
-                        initial_messages = self.sessions[session_id][:1] if self.sessions[session_id] else []
-                        self.sessions[session_id] = initial_messages + self.sessions[session_id][-(max_history * 2):]
-
-                    # Include model info in response
-                    model_info = self.model_manager.get_model_info(self.model_path)
-                    model_name = model_info.name if model_info else os.path.basename(self.model_path)
-
-                    # Publish response event
-                    response_event = LLMResponseEvent(
-                        session_id=session_id,
-                        response=response,
-                        tokens_used=metrics["tokens_used"],
-                        generation_time_ms=metrics["generation_time_ms"],
-                        model_name=model_name
-                    )
-
-                    await self.event_bus.publish(response_event)
-
-                except Exception as e:
-                    self.logger.error(f"Error processing LLM request: {str(e)}")
-                    # Send error response
-                    error_response = LLMResponseEvent(
-                        session_id=event.session_id,
-                        response=f"Error: {str(e)}",
-                        tokens_used=0,
-                        generation_time_ms=0,
-                        model_name="error"
-                    )
-                    await self.event_bus.publish(error_response)
-
-            await asyncio.sleep(0.01)
-
-    def clear_session(self, session_id: str):
-        """Clear a conversation session
-
-        Args:
-            session_id: Session ID to clear
-        """
+    async def _clear_session(self, session_id: str):
+        """ Clear sessions history """
         if session_id in self.sessions:
+            self.logger.info(f"Clearing session {session_id}")
             del self.sessions[session_id]
 
+    async def _process_llm_request(self, event: LLMRequestEvent):
+        """ Process an LLM request event """
+        self.logger.info(f"Processing LLM request: session_id={event.session_id}")
+
+        try:
+            # get parameters
+            params = event.parameters or {}
+
+            model_id = params.get("model_id", self.default_model_id)
+
+            # get or create session
+            session_id = event.session_id
+            if session_id not in self.sessions:
+                self.sessions[session_id] = []
+
+            # add message to history if needed
+            if event.chat_history is None:
+                self.sessions[session_id].append({
+                    "role": "user",
+                    "content": event.prompt
+                })
+
+            # get chat history if needed
+            chat_history = None
+            if params.get("maintain_history", True):
+                chat_history = event.chat_history or self.sessions[session_id]
+
+            # get model
+            try:
+                model = await self.model_service.get_model(model_id)
+            except Exception as e:
+                self.logger.error(f"Failed to get model {model_id}: {str(e)}")
+
+            template_id = params.get("template_id")
+            if template_id:
+                template = self.prompt_library.get_template(template_id)
+                if not template:
+                    self.logger.warning(f"Template {template_id} not found, using default")
+
+            # generate response
+            response, metrics = await model.generate(
+                prompt=event.prompt,
+                system_prompt=event.system_prompt,
+                chat_history=chat_history,
+                max_tokens=params.get("max_tokens", 512),
+                temperature=params.get("temperature", 0.7),
+                top_p=params.get("top_p", 0.95),
+                stop=params.get("stop", None),
+                use_cache=params.get("use_cache", self.cache_enabled),
+            )
+
+            if event.chat_history is None:
+                self.sessions[session_id].append({
+                    "role": "assistant",
+                    "content": response
+                })
+
+            # limit history length
+            max_history = params.get("max_history", 10)
+            if len(self.sessions[session_id]) > max_history * 2:
+                # keep first message (usually system) and trim older messages
+                initial_messages = self.sessions[session_id][:1] if self.sessions[session_id] else []
+                self.sessions[session_id] = initial_messages + self.sessions[session_id][-(max_history * 2):]
+
+            model_info = self.model_service.model_manager.get_model(model_id)
+            model_name = model_info.get("name", model_id) if model_info else model_id
+
+            # create response event
+            response_event = LLMResponseEvent(
+                session_id=session_id,
+                response=response,
+                tokens_used=metrics["tokens_used"],
+                generation_time_ms=metrics["generation_time_ms"],
+                model_name=model_name,
+                cache=metrics.get("cached", False)
+            )
+
+            await self.event_bus.publish(response_event)
+
+        except Exception as e:
+            self.logger.error(f"Error processing LLM request: {str(e)}", exc_info=True)
+
+            error_response = LLMResponseEvent(
+                session_id=event.session_id,
+                response=f"Error: {str(e)}",
+                tokens_used=0,
+                generation_time_ms=0,
+                model_name="error"
+            )
+            await self.event_bus.publish(error_response)
+
 async def llm_runner_component(
-    event_bus: EventBus,
-    model_path: str,
-    prompt_template: Optional[str] = None,
-    cache_enabled: bool = True
+    event_bus,
+    model_service,
+    default_model_id,
+    cache_enabled=True,
+    cache_dir=None
 ):
-    """ Create and return the LLM runner component """
-    # Create shared managers
-    model_manager = ModelManager()
-    prompt_library = PromptLibrary()
+    """
+    Main LLM runner component that interfaces with the event bus
 
-    # Create cache directory if caching is enabled
-    cache_dir = None
-    if cache_enabled:
-        base_dir = Path(__file__).resolve().parent.parent.parent
-        cache_dir = os.path.join(base_dir, "cache", "llm_responses")
-        os.makedirs(cache_dir, exist_ok=True)
+    Args:
+        event_bus: Event bus for communication
+        model_service: Service for model management
+        default_model_id: ID of the default model
+        cache_enabled: Whether to enable response caching
+        cache_dir: Directory for response caching
+    """
+    logger = get_logger("LLMRunner")
+    logger.info("Starting LLM runner component")
 
+    # Create LLM runner
     runner = LLMRunner(
         event_bus=event_bus,
-        model_path=model_path,
-        model_manager=model_manager,
-        prompt_library=prompt_library,
-        prompt_template=prompt_template,
-        cache_dir=cache_dir,
-        cache_enabled=cache_enabled
+        model_service=model_service,
+        default_model_id=default_model_id,
+        cache_enabled=cache_enabled,
+        cache_dir=cache_dir
     )
+
+    # Run the runner
     await runner.run()
