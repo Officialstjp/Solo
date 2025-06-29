@@ -1,3 +1,4 @@
+# ============= GENERAL SECTION =====================
 # secrets
 .env
 .env.example
@@ -8,9 +9,6 @@ scripts/.python-version
 
 # in case
 temp/
-
-# pre commit config
-.pre-commit-config.yaml
 
 # dev llama documentation
 llama-cpp-python · PyPI.pdf
