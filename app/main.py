@@ -158,36 +158,38 @@ class SoloApp:
 
         return True
 
-async def run_api_server(event_bus, model_manager, config):
-    """
-    Run the API server using the application factory
+    async def run_api_server(event_bus, model_manager, config):
+        """
+        Run the API server using the application factory
 
-    Args:
-        event_bus: The event bus instance
-        model_manager: The model manager instance
-        config: The application configuration
-    """
-    from app.api.factory import create_app
-    import uvicorn
-    import asyncio
+        Args:
+            event_bus: The event bus instance
+            model_manager: The model manager instance
+            config: The application configuration
+        """
+        from app.api.factory import create_app
+        import uvicorn
+        import asyncio
 
-    logger = get_logger("APIServer")
-    logger.info(f"Starting API server on port {config.api_port}")
+        logger = get_logger("APIServer")
+        logger.info(f"Starting API server on port {config.api_port}")
 
-    # Create the FastAPI app using the factory
-    app = create_app()
+        # Create the FastAPI app using the factory
+        app = create_app()
 
-    # Configure uvicorn server
-    config = uvicorn.Config(
-        app=app,
-        host="0.0.0.0",
-        port=config.api_port,
-        log_level="info"
-    )
+        # Configure uvicorn server
+        config = uvicorn.Config(
+            app=app,
+            host="0.0.0.0",
+            port=config.api_port,
+            log_level="info"
+        )
+        server = uvicorn.Server(config)
+        await server.serve() # girlboss
 
-    server = uvicorn.Server(config)
-
-    await server.serve() # girlboss
+    async def run_PostgreSQL():
+        logger = get_logger("main")
+        logger.error("Not yet implemented")
 
 async def main():
     """ Main entry point for the application """
@@ -231,7 +233,7 @@ async def main():
 
     app.register_component(
         "api_server",
-        run_api_server,
+        app.run_api_server,
         event_bus=app.event_bus,
         model_manager=app.model_manager,
         config=app.config
