@@ -162,3 +162,11 @@ SELECT cron.schedule('0 0 1 * *', 'SELECT metrics.crete_month_partition()');
 4. **Constraint Exclusion**: Set constraint_exclusion = on in PostgreSQL configuration to optimize partition pruning
 
 5. **Maintenance Windows**: Schedule routine maintenance during off-peak hours
+
+```SQL
+-- Analyze tables to update statistics
+ANALYZE metrics.system_metrics;
+
+-- Vacuum to reclaim space
+VACUUM FULL metrics.system_metrics_y2025m01;
+```
