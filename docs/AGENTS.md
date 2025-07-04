@@ -1,4 +1,4 @@
-# AGENTS.md — Project-wide Instructions for Codex
+# AGENTS.md
 # Scope: entire repository
 
 ## 1. Environment
@@ -56,7 +56,7 @@ For all below: if not possible at the current time, keep in mind and run when in
 - **Deployment**: on main push; use environment: production with required reviewers.
 
 ## 6. Assistant Behaviour
-- **Explain first**: provide a succinct plan before editing more than one file.
+- **Explain first**: provide a succinct plan before editing any file.
 
 - **Detail rationale**: accompany every patch with reasoning I can learn from.
 
@@ -67,7 +67,7 @@ For all below: if not possible at the current time, keep in mind and run when in
 ## 7. References
 - **README**: Classicaly, README.md contains an overview of the projet
 
-- **System Architecture**: Refer to "Solo - System Architecture Concept.md" for system architecture, project timeline & development
+- **System Architecture**: Refer to "Docs\Solo - System Architecture Concept.md" for system architecture, project timeline & development
 
 - **Dependecies**: Refer to "pyproject.toml" for project dependencies
 

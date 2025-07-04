@@ -223,3 +223,4 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 .vscode/tasks.json
+.github/instructions/copilot.instructions.md

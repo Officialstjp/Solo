@@ -1,0 +1,45 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: solo_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-solo_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-solo}
+      # Tune PostgreSQL parameters
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      # Persist data
+      - solo_pg_data:/var/lib/postgresql/data
+      # Initialize database
+      - ./scripts/SQL:/docker-entrypoint-initdb.d
+      # Custom configuration
+      - ./scripts/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+      # Backup location
+      - ./backups:/backups
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - solo_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-solo_app} -d ${POSTGRES_DB:-solo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+
+networks:
+  solo_network:
+    driver: bridge
+
+volumes:
+  solo_pg_data:
+    driver: local
