@@ -60,11 +60,44 @@ solo (database)
 ```
 
 ## Table Partitioning
+### Introduction
+
+Partitioned Tables have the some key advantages, compared to normal tables, notably:
+1. Data Distribution:
+- Regular Tables store all data in a single table file
+- Pratitioned tables distribute data across multiple child tables based on the partiton key
+2. Query Processing:
+- PostgreSQL can skip irrelevant partitions during queries (partition pruning)
+- The parititon key must be included in WHERE clauses to benefit from this optimization
+3. Maintenacne Operation:
+- You can maintain (vacuum, reindex) individual partitions without affecting the entire dataset
+- You can easily archive or drop old data by detaching or dropping partitions
+4. Constraints:
+- Primary keys must include the partition key
+- Foreing keys have some limititation across partitons
+
+### How Partition Tables Work
+When you insert data into a partitioned table, PostgreSQL:
+1. Evalues which partiton the data belongs to based on the partition key
+2. Routes the data to the appropriate child table
+3. Maintains the partition constraint automatically
+
+When you query a partitioned table, PostgreSQL:
+1. Analyzes your WHERE clauses to determine which partitions might contian matching data
+2. Only scans relevant partitions
+3. Combines results from all scanned partitions
+
+
 1. **Query Performance**:
 ```SQL
--- Only accesses July 2025 partition
+-- Without partitioning: Must scan the entire table (potentially millions of rows)
 SELECT * FROM metrics.system_metrics
-WHERE timestamp BETWEEN '2025-07-01' AND '2025-07-31';
+WHERE timestamp BETWEEN '2025-07-15' AND '2025-07-16';
+
+-- With partitioning: Only scans the July 2025 partition (maybe thousands of rows)
+-- Same query but much faster!
+SELECT * FROM metrics.system_metrics
+WHERE timestamp BETWEEN '2025-07-15' AND '2025-07-16';
 ```
 2. Maintenance Efficiency: Perform maintenance operations on individual partitions
 ```SQL
