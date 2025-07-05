@@ -1,24 +1,51 @@
+DROP ROLE IF EXISTS "stjp";
+DROP ROLE IF EXISTS "solo_app";
+DROP ROLE IF EXISTS "solo_app_role";
+DROP ROLE IF EXISTS "solo_readonly";
+
 -- Create schemas for logical organization
-CREATE SCHEMA metrics;
-CREATE SCHEMA models;
-CREATE SCHEMA users;
-CREATE SCHEMA rag;
+CREATE SCHEMA IF NOT EXISTS metrics;
+CREATE SCHEMA IF NOT EXISTS models;
+CREATE SCHEMA IF NOT EXISTS users;
+CREATE SCHEMA IF NOT EXISTS rag;
+
+-- Application role with appropriate privileges
+CREATE ROLE solo_app_role NOLOGIN;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO solo_app_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO solo_app_role;
+
+-- Application user
+CREATE USER "solo_app" WITH PASSWORD 'L*ck*rsB+llsLebron';
+GRANT solo_app_role TO "solo_app";
+
+-- Adm user
+CREATE ROLE "stjp" WITH
+  LOGIN
+  SUPERUSER
+  INHERIT
+  CREATEDB
+  CREATEROLE
+  REPLICATION
+  BYPASSRLS
+  PASSWORD 'N133aB+llsLebron';
+
+-- Create read-only role for dashboards
+CREATE ROLE solo_readonly NOLOGIN;
+GRANT USAGE ON SCHEMA metrics TO solo_readonly;
+GRANT SELECT ON ALL TABLES IN SCHEMA metrics TO solo_readonly;
+ALTER DEFAULT PRIVILEGES IN SCHEMA metrics
+    GRANT SELECT ON TABLES TO solo_readonly;
 
 -- Update role permissions to include new schemas
 GRANT USAGE, CREATE ON SCHEMA metrics, models, users, rag TO solo_app_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA metrics, models, users, rag
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO solo_app_role;
-
--- Create read-only role for dashboards
-CREATE ROLE solo_readonly NOLOGIN;
-GRANT USAGE ON SCHEMA metrics TO solo_readonly
-GRANT SELECT ON ALL TABLES IN SCHEMA metrics TO solo_readonly
-ALTER DEFAULT PRIVILEGES IN SCHEMA metrics GRANT SELECT ON TABLES TO solo_readonly
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO solo_app_role;
 
 -- System metrics with partitioning
 CREATE TABLE metrics.system_metrics (
     id SERIAL,
-    timestamp, TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     cpu_percent FLOAT,
     cpu_temperature FLOAT,
     memory_percent FLOAT,
@@ -61,10 +88,10 @@ CREATE TABLE metrics.llm_metrics (
 ) PARTITION BY RANGE (timestamp);
 
 -- Create initial partitions (adjust dates as needed)
-CREATE TABLE metrics.llm_metrics_y202507 PARTITION OF metrics.system_metrics(timestamp);
-    FOR VALUES FROM ('2025-07-01') TO ('2025-08-01')
+CREATE TABLE metrics.llm_metrics_y202507 PARTITION OF metrics.llm_metrics
+    FOR VALUES FROM ('2025-07-01') TO ('2025-08-01');
 
-CREATE TABLE metrics.llm_metrics_y202508 PARTITION OF metrics.system_metrics(timestamp);
+CREATE TABLE metrics.llm_metrics_y202508 PARTITION OF metrics.llm_metrics
     FOR VALUES FROM ('2025-08-01') TO ('2025-09-01');
 
 -- Create indexes
@@ -81,11 +108,11 @@ CREATE TABLE metrics.daily_metrics_summary (
     avg_tokens_per_second FLOAT,
     avg_response_time_ms FLOAT,
     cache_hits INTEGER NOT NULL DEFAULT 0,
-    cach_misses INTEGER NOT NULL DEFAULT 0,
+    cache_misses INTEGER NOT NULL DEFAULT 0,
     most_used_model VARCHAR(255),
     peak_cpu_percent FLOAT,
     peak_memory_percent FLOAT,
-    peak_gpu_percent FLOAT,
+    peak_gpu_percent FLOAT
 );
 
 -- Models table in models schema
@@ -100,8 +127,8 @@ CREATE TABLE models.models (
     file_path VARCHAR (255) NOT NULL,
     file_size_mb FLOAT NOT NULL,
     first_added TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    last_used TIMESTAMPTZ
-    metadata JSONB
+    last_used TIMESTAMPTZ,
+    metadata JSONB,
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
@@ -131,7 +158,7 @@ CREATE TABLE users.sessions (
 CREATE TABLE users.conversation (
     id SERIAL PRIMARY KEY,
     conversation_id VARCHAR(255) NOT NULL UNIQUE,
-    session_id VARCHAR(255) NOT NULL REFERENCES users.session_id(session_id),
+    session_id VARCHAR(255) NOT NULL REFERENCES users.conversation(conversation_id),
     title VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -153,7 +180,7 @@ CREATE TABLE users.messages (
 );
 
 CREATE INDEX idx_messages_conversation_id ON users.messages(conversation_id);
-CREATE INDEX idx_messages_created_at ON users.messages(created_at):
+CREATE INDEX idx_messages_created_at ON users.messages(created_at);
 
 -- RAG components in rag schema
 -- FIRST, ensure pgvector extension is available
@@ -161,7 +188,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE rag.documents (
     id SERIAL PRIMARY KEY,
-    doc_id VARCHAR(255) NOT NULL UNIQUE
+    doc_id VARCHAR(255) NOT NULL UNIQUE,
     title VARCHAR(255),
     content TEXT NOT NULL,
     source VARCHAR(255),
@@ -213,30 +240,30 @@ BEGIN
     next_month := date_trunc('month', now()) + interval '1 month';
 
     -- Generate partition names
-    partititon_name_system := 'metrics.system_metrics_y' ||
+    partition_name_system := 'metrics.system_metrics_y' ||
                     to_char(next_month, 'YYYY') ||
                     'm' ||
                     to_char(next_month, 'MM');
 
-    paratition_name_llm := 'metrics.llm_metrics_y' ||
+    partition_name_llm := 'metrics.llm_metrics_y' ||
                     to_char(next_month, 'YYYY') ||
                     'm' ||
                     to_char(next_month, 'MM');
 
     start_date := to_char(next_month, 'YYYY-MM-DD');
-    end_date := to_char(next_month + interva '1 month', 'YYYY-MM-DD');
+    end_date := to_char(next_month + interval '1 month', 'YYYY-MM-DD');
 
     -- Create the system metrics partition if it doesn't exists
     EXECUTE format('
         CREATE TABLE IF NOT EXISTS %s PARTITION OF metrics.system_metrics
-        FOR VALUES FROM (%L) TO ($L)',
-        partition_name_system, start_date, end_date)
+        FOR VALUES FROM (%L) TO (%L)',
+        partition_name_system, start_date, end_date);
 
     -- Create the LLM Metrics partition if it doesn't exist
     EXECUTE format('
         CREATE TABLE IF NOT EXISTS %s PARTITION OF metrics.llm_metrics
-        FOR VALUES FROM (%L) TO ($L)'
-        partition_name_llm, start_date, end_date)
+        FOR VALUES FROM (%L) TO (%L)',
+        partition_name_llm, start_date, end_date);
 
     RAISE NOTICE 'Created partitions for %', next_month;
 END;
