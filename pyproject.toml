@@ -21,6 +21,8 @@ python-dotenv = "^1.0"
 structlog = "^24.1"
 pydantic = "^2.7"
 aioconsole = "^0.8.1"
+asyncpg = "^0.29.0"
+psycopg = "^2.9.0"
 
 [tool.poetry.group.dev.dependencies]                    # - DEV + CI
 black = "^24.4"
