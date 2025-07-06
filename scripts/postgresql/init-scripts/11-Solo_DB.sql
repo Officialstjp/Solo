@@ -16,7 +16,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO solo_app_role;
 
 -- Application user
-CREATE USER "solo_app" WITH PASSWORD 'L*ck*rsB+llsLebron';
+CREATE USER "solo_app" WITH PASSWORD ${POSTGRES_APPPASSWORD};
 GRANT solo_app_role TO "solo_app";
 
 -- Adm user
@@ -28,7 +28,7 @@ CREATE ROLE "stjp" WITH
   CREATEROLE
   REPLICATION
   BYPASSRLS
-  PASSWORD 'N133aB+llsLebron';
+  PASSWORD ${POSTGRES_ADMPASSWORD};
 
 -- Create read-only role for dashboards
 CREATE ROLE solo_readonly NOLOGIN;
@@ -62,6 +62,8 @@ CREATE TABLE metrics.system_metrics (
 ) PARTITION BY RANGE (timestamp);
 
 --- Creat initial partitions (adjust dates as needed)
+CREATE TABLE metrics.system_metrics_default PARTITION OF metrics.system_metrics DEFAULT;
+
 CREATE TABLE metrics.system_metrics_y202507 PARTITION OF metrics.system_metrics
     FOR VALUES FROM ('2025-07-01') TO ('2025-08-01');
 
@@ -88,6 +90,8 @@ CREATE TABLE metrics.llm_metrics (
 ) PARTITION BY RANGE (timestamp);
 
 -- Create initial partitions (adjust dates as needed)
+CREATE TABLE metrics.llm_metrics_default PARTITION OF metrics.llm_metrics DEFAULT;
+
 CREATE TABLE metrics.llm_metrics_y202507 PARTITION OF metrics.llm_metrics
     FOR VALUES FROM ('2025-07-01') TO ('2025-08-01');
 
@@ -155,10 +159,10 @@ CREATE TABLE users.sessions (
     metadata JSONB
 );
 
-CREATE TABLE users.conversation (
+CREATE TABLE users.conversations (
     id SERIAL PRIMARY KEY,
     conversation_id VARCHAR(255) NOT NULL UNIQUE,
-    session_id VARCHAR(255) NOT NULL REFERENCES users.conversation(conversation_id),
+    session_id VARCHAR(255) NOT NULL REFERENCES users.sessions(session_id),
     title VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -169,7 +173,7 @@ CREATE TABLE users.conversation (
 CREATE TABLE users.messages (
     id SERIAL PRIMARY KEY,
     message_id VARCHAR(255) NOT NULL UNIQUE,
-    conversation_id VARCHAR(255) NOT NULL REFERENCES users.sessions(session_id),
+    conversation_id VARCHAR(255) NOT NULL REFERENCES users.conversations(conversation_id),
     role VARCHAR(50) NOT NULL,
     content TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -225,6 +229,7 @@ CREATE TABLE metrics.response_cache (
 );
 
 CREATE INDEX idx_response_cache_expires_at ON metrics.response_cache(expires_at);
+CREATE INDEX idx_response_cache_key_expires ON metrics.response_cache(cache_key, expires_at);
 
 -- Create function to automatically generate new partitions
 CREATE OR REPLACE FUNCTION metrics.create_partitions()
@@ -268,3 +273,28 @@ BEGIN
     RAISE NOTICE 'Created partitions for %', next_month;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Function to perform routine maintenance on metrics tables
+CREATE OR REPLACE FUNCTION metrics.maintenance()
+RETURNS void AS $$
+BEGIN
+  -- Analyze tables for query planning
+  ANALYZE metrics.system_metrics;
+  ANALYZE metrics.llm_metrics;
+  ANALYZE metrics.response_cache;
+
+  -- Vacuum tables with significant churn
+  VACUUM metrics.response_cache;
+
+  RAISE NOTICE 'Maintenance completed';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create the cron extension
+CREATE EXTENSION pg_cron;
+
+-- Schedule the function to run at midnight on the first day of each month
+SELECT cron.schedule('create_monthly_partitions', '0 0 1 * *', 'SELECT metrics.create_partitions()');
+
+-- Schedule weekly maintenance
+SELECT cron.schedule('weekly_maintenance', '0 0 * * 0', 'SELECT metrics.maintenance()');

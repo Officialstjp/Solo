@@ -1,6 +1,5 @@
 # Solo Project Database Design
-
-This document outlines the database design for the Solo application. The database will be used to store various types of data, including metrics, model information, user sessions, conversation history, and vector embeddings for RAG capabilities.
+The database will be used to store various types of data, including metrics, model information, user sessions, conversation history, and vector embeddings for RAG capabilities.
 
 ## Database Selection: PostgreSQL
 
@@ -217,7 +216,7 @@ For managing database migrations, we'll use Alembic with SQLAlchemy. This allows
 
 ## Partitioning Strategy for Metrics Data
 
-For metrics tables that will grow continuously, we'll implement time-based partitioning:
+For metrics tables that will grow continuously, we use time-based partitioning:
 
 ```sql
 -- Example for system_metrics
@@ -308,3 +307,94 @@ The database design allows for future expansion to support:
 4. **A/B Testing**: Support for comparing different models or prompts
 5. **Feedback Systems**: User feedback on responses for model improvement
 6. **Distributed Deployment**: Potential for read replicas or sharding
+
+# Database Management
+
+## 1. Managing Database Secrets
+
+There are several approaches to handle secrets in PostgreSQL initialization scripts:
+
+### Environment Variable Substitution
+
+We use the `envsubst` utility to replace environment variables in SQL scripts before execution:
+
+```bash
+# In scripts/DockerInit/00-init-db.sh
+echo "Processing SQL files with environment variable substitution..."
+for f in /etc/postgresql/init-scripts/*.sql; do
+  echo "Processing $f file..."
+
+  # Create a temporary file with variables substituted
+  tempfile=$(mktemp)
+  export POSTGRES_APPPASSWORD="'${POSTGRES_APPPASSWORD:-AppUserPwd123}'"
+  export POSTGRES_ADMPASSWORD="'${POSTGRES_ADMPASSWORD:-AdminPwd456}'"
+
+  envsubst < "$f" > "$tempfile"
+
+  # Execute the processed SQL file
+  psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f "$tempfile"
+
+  # Clean up and unset variables for security
+  rm "$tempfile"
+  unset POSTGRES_APPPASSWORD
+  unset POSTGRES_ADMPASSWORD
+done
+```
+
+## 2. Backup Strategy
+A full Backup Strategy is still in the works...
+
+### 2.1 Types of Backups
+
+1. **Logical Backups (pg_dump)**
+   - Human-readable SQL scripts
+   - Easy to restore selectively
+   - Slower than physical backups for large databases
+
+2. **Physical Backups (pg_basebackup)**
+   - Binary copy of database files
+   - Fast for large databases
+   - Point-in-time recovery with WAL files
+
+3. **Continuous Archiving**
+   - WAL archiving for point-in-time recovery
+   - Minimal data loss in case of failure
+
+### 2.2 Backup Schedule Sktech
+
+| Backup Type | Frequency | Retention | Tool |
+|-------------|-----------|-----------|------|
+| Full Logical | Daily | 7 days | pg_dump |
+| Schema-only | Weekly | 4 weeks | pg_dump --schema-only |
+| WAL Archives | Continuous | 7 days | archive_command |
+
+### 2.3 Using the Backup Scripts
+
+```powershell
+# Create a full backup
+.\scripts\db\backup-db.ps1 -Compress -RetainDays 7
+
+# Create a schema-only backup
+.\scripts\db\backup-db.ps1 -BackupName "schema_backup" -IncludeSchema -IncludeData:$false
+
+# Set up scheduled backups
+.\scripts\db\schedule-backups.ps1 -TimeOfDay "03:00" -DaysOfWeek "Monday","Wednesday","Friday" -RetainDays 30
+```
+
+## 4. Further Improvements
+
+1. **Connection Pooling**
+   - Implement PgBouncer for connection pooling
+   - Configure max_connections appropriately
+
+2. **Vacuum Strategy**
+   - Set up autovacuum for busy tables
+   - Configure vacuum thresholds
+
+3. **High Availability**
+   - Configure streaming replication
+   - Implement failover mechanism
+
+4. **Monitoring**
+   - Set up pg_stat_statements for query monitoring
+   - Implement alert systems for database health

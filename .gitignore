@@ -1,7 +1,9 @@
 # ============= GENERAL SECTION =====================
 # secrets
 .env
-.env.example
+
+# anything under \backups
+backups/*
 
 scripts/.python-version
 
@@ -24,6 +26,9 @@ models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
 
 docs/Mistral 7B LLM _ Prompt Engineering Guide.pdf
 /cache
+
+.github/instructions/copilot.instructions.md
+docs/llama/Mistral 7B LLM _ Prompt Engineering Guide.pdf
 
 # ============= PYTHON SECTION =====================
 # Source: https://github.com/github/gitignore/blob/main/Python.gitignore
@@ -223,4 +228,3 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 .vscode/tasks.json
-.github/instructions/copilot.instructions.md

@@ -104,7 +104,7 @@ POSTGRES_DB=solo
 POSTGRES_PORT=5432
 ```
 
-4. Start your containers:
+4. Starting containers:
 ```
 docker-compose up -d
 ```
