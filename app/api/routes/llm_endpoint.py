@@ -14,7 +14,8 @@ from app.utils.events import EventBus, EventType, LLMRequestEvent, LLMResponseEv
 from app.core.model_manager import ModelManager
 from app.core.model_service import ModelService
 from app.core.prompt_templates import PromptLibrary
-from app.api.dependencies import get_event_bus, get_model_manager, get_model_service, get_prompt_library, get_metrics
+from app.core.db_service import DatabaseService
+from app.api.dependencies import get_event_bus, get_model_manager, get_model_service, get_prompt_library, get_metrics, get_db_service
 from app.utils.logger import get_logger
 
 logger = get_logger(name="LLM_API", json_foramt=False)
@@ -83,7 +84,8 @@ def create_router(app: FastAPI) -> APIRouter:
         event_bus: EventBus = Depends(get_event_bus),
         model_manager: ModelManager = Depends(get_model_manager),
         prompt_library: PromptLibrary = Depends(get_prompt_library),
-        metrics: dict = Depends(get_metrics)
+        metrics: dict = Depends(get_metrics),
+        db_service: DatabaseService = Depends(get_db_service)
     ):
         """
         Generate text using the LLM

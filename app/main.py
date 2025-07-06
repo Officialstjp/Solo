@@ -22,6 +22,7 @@ from core.llm_runner import llm_runner_component
 from core.llm_tester import llm_tester_component
 from core.model_manager import ModelManager
 from core.prompt_templates import PromptLibrary
+from core.db_service import DatabaseService
 from utils.logger import get_logger
 from utils.events import EventBus, EventType
 import uvicorn
@@ -148,6 +149,9 @@ class SoloApp:
         """ Gracefully shutdown the application """
         self.logger.info("Shutting down Solo....")
 
+        if hasattr(self, 'db_service') and self.db_service:
+            await self.db_service.close()
+
         for task in self.tasks:
             task.cancel()
 
@@ -158,13 +162,12 @@ class SoloApp:
 
         return True
 
-    async def run_api_server(event_bus, model_manager, config):
+    async def run_api_server(self, event_bus, config, db_service):
         """
         Run the API server using the application factory
 
         Args:
             event_bus: The event bus instance
-            model_manager: The model manager instance
             config: The application configuration
         """
         from app.api.factory import create_app
@@ -175,7 +178,7 @@ class SoloApp:
         logger.info(f"Starting API server on port {config.api_port}")
 
         # Create the FastAPI app using the factory
-        app = create_app()
+        app = create_app(db_service=db_service)
 
         # Configure uvicorn server
         config = uvicorn.Config(
@@ -187,9 +190,16 @@ class SoloApp:
         server = uvicorn.Server(config)
         await server.serve() # girlboss
 
-    async def run_PostgreSQL():
-        logger = get_logger("main")
-        logger.error("Not yet implemented")
+    async def run_db_service(self):
+        """ Initialize and run the database service"""
+        self.logger.info("Initializing database service...")
+        self.db_service = DatabaseService()
+
+        connection_successful = await self.db_service.initialize()
+        if connection_successful:
+            self.logger.info("Database connection successful")
+        else:
+            self.logger.warning("Database connection failed, some features may be unavailable")
 
 async def main():
     """ Main entry point for the application """
@@ -207,6 +217,11 @@ async def main():
             return
 
     # --- register components ---
+    app.register_component(
+        "db_service",
+        app.run_db_service
+    )
+
     app.register_component(
         "llm_runner",
         llm_runner_component,
@@ -236,7 +251,8 @@ async def main():
         app.run_api_server,
         event_bus=app.event_bus,
         model_manager=app.model_manager,
-        config=app.config
+        config=app.config,
+        db_service=app.db_service
     )
 
     await app.startup()
