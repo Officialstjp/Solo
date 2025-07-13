@@ -28,7 +28,7 @@ class DatabaseService:
             config: Configuration object or dict
         """
         self.logger = get_logger("db_service")
-        self.connection_string = connection_string or "postgresql://solo_app:changeme@localhsot:5432/solo"
+        self.connection_string = connection_string or "postgresql://solo_app:changeme@localhost:5432/solo"
         self.config = config
 
         self.metrics = MetricsDatabase()
@@ -42,7 +42,7 @@ class DatabaseService:
     async def initialize(self):
         """ Initialize the database connection pool"""
         try:
-            self.lgger.info("Initializing databse connection pool")
+            self.logger.info("Initializing databse connection pool")
             await get_connection_pool(self.connection_string)
 
             await self.metrics.initialize()
