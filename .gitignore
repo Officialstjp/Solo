@@ -30,6 +30,7 @@ docs/Mistral 7B LLM _ Prompt Engineering Guide.pdf
 .github/instructions/copilot.instructions.md
 docs/llama/Mistral 7B LLM _ Prompt Engineering Guide.pdf
 docs/dev
+docs/Agents
 
 # ============= PYTHON SECTION =====================
 # Source: https://github.com/github/gitignore/blob/main/Python.gitignore
