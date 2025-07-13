@@ -1,15 +1,6 @@
 # Solo Project Database Design
 The database will be used to store various types of data, including metrics, model information, user sessions, conversation history, and vector embeddings for RAG capabilities.
 
-## Database Selection: PostgreSQL
-
-We've chosen PostgreSQL for the following reasons:
-
-1. **Robustness and Reliability**: PostgreSQL is a mature, production-ready database system with ACID compliance.
-2. **Advanced Features**: Supports JSON/JSONB for flexible schema needs, full-text search, and vector extensions (pgvector).
-3. **Scalability**: Can handle growing data volumes with proper indexing and partitioning strategies.
-4. **Docker Support**: Excellent containerization support for development and production environments.
-5. **Active Community**: Large community and extensive documentation.
 
 ## Database Schema
 
@@ -29,10 +20,17 @@ CREATE TABLE system_metrics (
     memory_used_mb FLOAT,
     memory_temperature FLOAT,
     gpu_percent FLOAT,
+    gpu_temperature FLOAT,
     gpu_fans_rpm FLOAT,
     gpu_watt FLOAT,
     vram_percent FLOAT,
     vram_used_mb FLOAT,
+    network_recieved FLOAT,
+    network_sent FLOAT,
+    disk_writes_s_C FLOAT,
+    disk_reads_s_C FLOAT,
+    disk_writes_s_D FLOAT,
+    disk_reads_s_D  FLOAT,
     system_uptime_seconds FLOAT,
     app_uptime_seconds FLOAT
 );
