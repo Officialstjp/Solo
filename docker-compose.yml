@@ -1,0 +1,66 @@
+services:
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+    container_name: solo_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-solo_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_APPPASSWORD: ${POSTGRES_APPPASSWORD:-AppUserPwd123}
+      POSTGRES_ADMPASSWORD: ${POSTGRES_ADMPASSWORD:-AdminPwd456}
+      POSTGRES_DB: ${POSTGRES_DB:-solo}
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_INITDB_WALDIR: "/var/lib/postgresql/wal"
+    volumes:
+      - solo_pg_data:/var/lib/postgresql/data
+      - ./scripts/DockerInit:/docker-entrypoint-initdb.d
+      - ./scripts/postgresql/:/etc/postgresql/
+      - ./backups:/backups
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - solo_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-solo_app} -d ${POSTGRES_DB:-solo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+            -c shared_preload_libraries='pg_stat_statements,vector,pg_cron'
+            -c cron.database_name='${POSTGRES_DB:-solo}'
+            -c jit=on
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+# uncomment when ready
+#  api:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile.api
+#    container_name: solo_api
+#    environment:
+#      DATABASE_URL: ${DATABASE_URL}
+#      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+#    volumes:
+#      - ./app:/app
+#      - ./models:/models
+#    ports:
+#      - "${API_PORT:-8000}:8000"
+#    networks:
+#      - solo_network
+#    depends_on:
+#      - db
+#    restart: unless-stopped
+
+networks:
+  solo_network:
+    driver: bridge
+
+volumes:
+  solo_pg_data:
+    driver: local

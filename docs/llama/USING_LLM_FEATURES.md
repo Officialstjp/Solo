@@ -4,11 +4,11 @@ This guide explains how to use the recently implemented LLM features in the Solo
 
 ## Model Management
 
-The ModelManager automatically discovers and manages GGUF models in your `models/` directory.
+The ModelManager automatically discovers and manages GGUF models in the `models/` directory.
 
 ### Available Models
 
-To see what models are available in your system:
+To see what models are available on this system:
 
 ```bash
 python -m app.core.model_info --verbose
@@ -31,7 +31,7 @@ python -m app.core.llm_demo --model "models/mistral-7b-instruct-v0.2.Q4_K_M.gguf
 
 ## Prompt Templates
 
-Solo uses model-specific prompt templates to format your inputs correctly for each model.
+Solo uses model-specific prompt templates to format inputs correctly for each model.
 
 ### Available Templates
 
@@ -119,9 +119,9 @@ python -m app.core.llm_demo --interactive
 
 This provides a more streamlined interface with fewer options.
 
-## Integration in Your Applications
+## Integration in Applications
 
-To use the LLM in your own code:
+To use the LLM in code:
 
 ```python
 from app.core.llm_runner import LLMRunner

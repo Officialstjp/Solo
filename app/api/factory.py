@@ -17,10 +17,11 @@ from app.config import get_config
 from app.core.model_manager import ModelManager
 from app.core.model_service import ModelService
 from app.core.prompt_templates import PromptLibrary
+from app.core.db_service import DatabaseService
 
 logger = get_logger(name="API_Factory", json_format=False)
 
-def create_app() -> FastAPI:
+def create_app(db_service=None) -> FastAPI:
     """
     Create and configure a FastAPI application instance
 
@@ -78,7 +79,8 @@ def create_app() -> FastAPI:
         "cache_misses": [],
         "tokens_per_second": [],
         "response_times": []
-    }
+    },
+    app.state.db_service = db_service
 
     # Register startup and shutdown events
     @app.on_event("startup")

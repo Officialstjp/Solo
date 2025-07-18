@@ -8,8 +8,7 @@ History   :
     2025-06-15      Updated to use enhanced model management
 
 """
-# time: about 75h, 28.06.25 18:00, curr daily: 3:00
-# continue with router integration and main server setup (step 5), then fill in placeholders and flesh out
+# time: about 110h, 13.07.25 19:30, curr daily: 4:00
 
 import asyncio
 import signal
@@ -22,6 +21,7 @@ from core.llm_runner import llm_runner_component
 from core.llm_tester import llm_tester_component
 from core.model_manager import ModelManager
 from core.prompt_templates import PromptLibrary
+from core.db_service import DatabaseService
 from utils.logger import get_logger
 from utils.events import EventBus, EventType
 import uvicorn
@@ -148,6 +148,9 @@ class SoloApp:
         """ Gracefully shutdown the application """
         self.logger.info("Shutting down Solo....")
 
+        if hasattr(self, 'db_service') and self.db_service:
+            await self.db_service.close()
+
         for task in self.tasks:
             task.cancel()
 
@@ -158,36 +161,44 @@ class SoloApp:
 
         return True
 
-async def run_api_server(event_bus, model_manager, config):
-    """
-    Run the API server using the application factory
+    async def run_api_server(self, event_bus, config, db_service):
+        """
+        Run the API server using the application factory
 
-    Args:
-        event_bus: The event bus instance
-        model_manager: The model manager instance
-        config: The application configuration
-    """
-    from app.api.factory import create_app
-    import uvicorn
-    import asyncio
+        Args:
+            event_bus: The event bus instance
+            config: The application configuration
+        """
+        from app.api.factory import create_app
+        import uvicorn
+        import asyncio
 
-    logger = get_logger("APIServer")
-    logger.info(f"Starting API server on port {config.api_port}")
+        logger = get_logger("APIServer")
+        logger.info(f"Starting API server on port {config.api_port}")
 
-    # Create the FastAPI app using the factory
-    app = create_app()
+        # Create the FastAPI app using the factory
+        app = create_app(db_service=db_service)
 
-    # Configure uvicorn server
-    config = uvicorn.Config(
-        app=app,
-        host="0.0.0.0",
-        port=config.api_port,
-        log_level="info"
-    )
+        # Configure uvicorn server
+        config = uvicorn.Config(
+            app=app,
+            host="0.0.0.0",
+            port=config.api_port,
+            log_level="info"
+        )
+        server = uvicorn.Server(config)
+        await server.serve() # girlboss
 
-    server = uvicorn.Server(config)
+    async def run_db_service(self):
+        """ Initialize and run the database service"""
+        self.logger.info("Initializing database service...")
+        self.db_service = DatabaseService()
 
-    await server.serve() # girlboss
+        connection_successful = await self.db_service.initialize()
+        if connection_successful:
+            self.logger.info("Database connection successful")
+        else:
+            self.logger.warning("Database connection failed, some features may be unavailable")
 
 async def main():
     """ Main entry point for the application """
@@ -205,6 +216,11 @@ async def main():
             return
 
     # --- register components ---
+    app.register_component(
+        "db_service",
+        app.run_db_service
+    )
+
     app.register_component(
         "llm_runner",
         llm_runner_component,
@@ -231,10 +247,11 @@ async def main():
 
     app.register_component(
         "api_server",
-        run_api_server,
+        app.run_api_server,
         event_bus=app.event_bus,
         model_manager=app.model_manager,
-        config=app.config
+        config=app.config,
+        db_service=app.db_service
     )
 
     await app.startup()

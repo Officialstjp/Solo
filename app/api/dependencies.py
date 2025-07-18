@@ -7,6 +7,7 @@ from app.utils.events import EventBus
 from app.core.model_manager import ModelManager
 from app.core.model_service import ModelService
 from app.core.prompt_templates import PromptLibrary
+from app.core.db_service import DatabaseService
 from app.config import AppConfig
 
 async def get_config(request: Request) -> AppConfig:
@@ -32,3 +33,7 @@ async def get_prompt_library(request: Request) -> PromptLibrary:
 async def get_metrics(request: Request) -> dict:
     """ Get the metrics dictionary from app state """
     return request.app.state.metrics
+
+async def get_db_service(request: Request) -> DatabaseService:
+    """ Get the DatabaseService instance from app state """
+    return request.app.state.db_service

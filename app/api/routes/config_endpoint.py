@@ -1,80 +1,163 @@
-from fastapi import APIRouter, HTTPException, Depends, FastAPI
-from pydantic import BaseModel
-from typing import Dict, Optional, Any
+# app/api/routes/config_endpoint.py
 
-from app.config import get_config, update_config
+"""
+Module Name: app/api/routes/config_endpoint.py
+Purpose   : API endpoints for configuration management
+"""
+from fastapi import APIRouter, Depends, FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import Dict, Any, Optional, List
+import json
+import os
+
+from app.config import AppConfig
 from app.api.dependencies import get_config
 from app.utils.logger import get_logger
 
-logger = get_logger(name="API_Server", json_format=False)
-
-class ConfigResponse(BaseModel):
-    config: Dict[str, Any]
+logger = get_logger(name="Config_API", json_format=False)
 
 class ConfigUpdateRequest(BaseModel):
-    llm: Optional[Dict[str, Any]] = None
-    log_level: Optional[str] = None
-    api_port: Optional[str] = None
-    # add other configurables as needed...
+    """Request model for updating configuration values"""
+    path: str  # Dot notation path to the config property (e.g., "llm.temperature")
+    value: Any  # New value to set
 
-class ConfigUpdateResponse(BaseModel):
-    status: str
-    message: str
+class ConfigSectionResponse(BaseModel):
+    """Response model for a config section"""
+    values: Dict[str, Any]
+    description: Optional[str] = None
 
-def creata_router(app: FastAPI) -> APIRouter:
+def create_router(app: FastAPI) -> APIRouter:
     """
-    Create and configure the configuration router
+    Create and configure the config router
+
     Args:
-        app (FastAPI): The FastAPI application instance
+        app: The FastAPI application instance
+
     Returns:
-        APIRouter: Configured router for configuration endpoints
+        APIRouter: Configured router with config endpoints
     """
-    router = APIRouter(prefix="/config", tags=["Configuration"])
+    router = APIRouter(prefix="/config", tags=["Config"])
 
-    @router.get("", response_model=ConfigResponse)
-    async def get_configuration(
-        config = Depends(get_config)
+    @router.get("/", response_model=Dict[str, Any])
+    async def get_full_config(
+        config: AppConfig = Depends(get_config)
     ):
-        """ Get the current configuration """
+        """
+        Get the full application configuration
+        """
         try:
-            config_dict = config.dict()
-            return ConfigResponse(config=config_dict)
+            # Return a dict representation of the config
+            # This assumes AppConfig has a method to convert to dict
+            config_dict = config.to_dict()
+
+            # Filter out sensitive information
+            if "api_keys" in config_dict:
+                config_dict["api_keys"] = {k: "***" for k in config_dict["api_keys"]}
+
+            return config_dict
         except Exception as e:
-            logger.error(f"Failed to retrieve configuration: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Failed to retrieve configuration: {str(e)}")
+            logger.error(f"Error retrieving config: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Failed to retrieve config: {str(e)}")
 
-    @router.post("/update", response_model=ConfigUpdateResponse)
-    async def update_configuration(
-        request: ConfigUpdateRequest,
-        config = Depends(get_config)
+    @router.get("/{section}", response_model=ConfigSectionResponse)
+    async def get_config_section(
+        section: str,
+        config: AppConfig = Depends(get_config)
     ):
-        """ Update system configuration """
+        """
+        Get a specific section of the configuration
+        """
         try:
-            # simplified for now, this needs to be expanded on and handled more carefully
+            config_dict = config.to_dict()
 
-            updated_config = config.dict()
+            if section not in config_dict:
+                raise HTTPException(status_code=404, detail=f"Config section '{section}' not found")
 
-            if request.llm:
-                updated_config["llm"].update(request.llm)
+            section_data = config_dict[section]
 
-            if request.log_level:
-                updated_config["log_level"] = request.log_level
+            # If there's a description for this section, include it
+            description = None
+            if hasattr(config, f"{section}_description"):
+                description = getattr(config, f"{section}_description")
 
-            if request.api_port:
-                updated_config["api_port"] = request.api_port
-
-            # apply updates
-            # NOTE: this needs proper config validation, aswell as a
-            # mechanism to apply changes to running components.
-            logger.info(f"Updating configuration: {updated_config}")
-
-            return ConfigUpdateResponse(
-                status="success",
-                message="Configuration updated successfully"
+            return ConfigSectionResponse(
+                values=section_data,
+                description=description
             )
-
+        except HTTPException:
+            raise
         except Exception as e:
-            logger.error(f"Failed to update configuration: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Failed to update configuration: {str(e)}")
+            logger.error(f"Error retrieving config section '{section}': {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Failed to retrieve config section: {str(e)}")
+
+    @router.post("/update", response_model=Dict[str, Any])
+    async def update_config(
+        request: ConfigUpdateRequest,
+        config: AppConfig = Depends(get_config)
+    ):
+        """
+        Update a specific configuration value
+        """
+        try:
+            # Split the path into parts
+            path_parts = request.path.split(".")
+
+            # Navigate to the correct part of the config
+            current = config.to_dict()
+            parent = None
+            last_key = None
+
+            for i, part in enumerate(path_parts):
+                if i == len(path_parts) - 1:
+                    # We've reached the leaf node
+                    parent = current
+                    last_key = part
+                    break
+
+                if part not in current:
+                    raise HTTPException(status_code=404, detail=f"Config path '{request.path}' not found")
+
+                current = current[part]
+
+            if parent is None or last_key is None:
+                raise HTTPException(status_code=400, detail="Invalid config path")
+
+            # Update the value
+            old_value = parent.get(last_key)
+            parent[last_key] = request.value
+
+            # Save the updated config
+            config.save()
+
+            return {
+                "status": "success",
+                "path": request.path,
+                "old_value": old_value,
+                "new_value": request.value
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error updating config: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Failed to update config: {str(e)}")
+
+    @router.post("/reload", response_model=Dict[str, Any])
+    async def reload_config(
+        config: AppConfig = Depends(get_config)
+    ):
+        """
+        Reload the configuration from disk
+        """
+        try:
+            # Reload the config
+            config.reload()
+
+            return {
+                "status": "success",
+                "message": "Configuration reloaded successfully"
+            }
+        except Exception as e:
+            logger.error(f"Error reloading config: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Failed to reload config: {str(e)}")
 
     return router
