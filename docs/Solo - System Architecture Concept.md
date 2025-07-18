@@ -3,40 +3,45 @@
 ``` Text
 Solo/
 ├─ app/                    # runtime code
-│  ├─ main.py              # CENTRAL MANAGER (launch & supervise coroutines)
-│  ├─ config.py            # pydantic-based settings loader (.env / CLI flags)
+│  ├─ api/
+│  │   ├─ server.py        # Main file orchestrating API Init
+│  │   ├─ factory.py       # Factory for FastAPI Apps
+│  │   ├─ dependencies.py  # Dependy injection for the API
+│  │   └─ routes/…
+│  │   │   ├─ models_endpoint.py
+│  │   │   ├─ metrics_endpoint.py
+│  │   │   ├─ config_endpoint.py
+│  │   │   ├─ llm_endpoint.py
 │  ├─ core/
+│  │   ├─ agent_bus.py     # CrewAI/Autogen orchestration helpers
 │  │   ├─ llm_runner.py    # llama.cpp / Ollama wrapper + caching
-│  │   ├─ model_manager.py # Model discovery and metadata extraction
-│  │   ├─ prompt_templates.py # Model-specific prompt formatting
-│  │   ├─ model_cache.py   # Response caching system
-│  │   ├─ model_info.py    # CLI tool for model inspection
+│  │   ├─ llm_tester.py    # CLI Testing utility for llms
+│  │   ├─ memory.py        # Chroma vector-DB helper
+│  │   ├─ model_cache.py   # caching mechanism for llm responses
+│  │   ├─ model_info.py    # CLI utility to display model information
+│  │   ├─ model_manager.py # Manages LLM model selection, validation
+│  │   ├─ prompt_templates.py # prompt templates for different model formats
 │  │   ├─ stt.py           # faster-whisper pipeline
 │  │   ├─ tts.py           # piper voice synth
-│  │   ├─ wake_word.py     # Porcupine hot-key / wake-word
-│  │   ├─ memory.py        # Chroma vector-DB helper
-│  │   └─ agent_bus.py     # CrewAI/Autogen orchestration helpers
-│  ├─ api/
-│  │   ├─ server.py        # FastAPI instance (REST + WebSocket)
-│  │   └─ routes/…
+│  │   └─ wake_word.py     # Porcupine hot-key / wake-word
 │  ├─ ui/
 │  │   └─ dashboard_app.py # Streamlit monitoring panel
 │  ├─ utils/
 │  │   ├─ logger.py        # struct-log setup
 │  │   └─ events.py        # pydantic event schema, asyncio.Queue
-│  └─ __init__.py
+│  ├─ main.py              # CENTRAL MANAGER (launch & supervise coroutines)
+│  ├─ config.py            # pydantic-based settings loader (.env / CLI flags)
 ├─ scripts/
-│  ├─ dev.ps1              # create venv, install deps, pre-commit
+│  ├─ setup_dev.ps1        # create venv, install deps, pre-commit
+│  ├─ cleanup_dev.ps1    # uninstall & cleanup dependencies, env-vars...
 │  ├─ run_agent.ps1        # one-liner to start everything
 │  └─ quantize.bat         # helper for gguf model conversion
 ├─ tests/                  # pytest unit + integration tests
 │  └─ …
-├─ cache/                  # response cache storage
-│  └─ llm_responses/
 ├─ requirements.txt / pyproject.toml
 ├─ .env.example            # sample secrets
 └─ .github/
-   └─ workflows/ci.yml     # pytest + lint GitHub Action
+   └─ workflows/ci.yml     # pytest + lint GitHub Actiongitgit
 ```
 
 
