@@ -99,6 +99,14 @@ Solo/
   - Logical schema organization
   - PowerShell tools for backup and restore
 
+- **Database Services** – Comprehensive database services for all application data:
+  - Central DatabaseService as the main entry point for database access
+  - Specialized services for metrics, models, users, RAG, and caching
+  - Security service (BigBrother) for authentication, authorization, and rate limiting
+  - User database with session tracking and conversation history
+  - Connection pooling for efficient database access
+  - Proper error handling and logging
+
 - **Agent Layer** – agent_bus.py will wrap **CrewAI** to create multi-agent workflows (planning, critique, tool-use).
 
 - **API** – server.py will be a **FastAPI** instance; REST routes will hand off work to main.py via the event bus, and long jobs will run in BackgroundTask helpers.
@@ -142,27 +150,31 @@ Solo/
 | LLM Runner              | ✅ Enhanced            | llama.cpp integration with GPU support, conversation history, prompt templates, response caching   |
 | CLI Tester              | ✅ Enhanced            | Interactive CLI for testing LLM with parameter customization and conversation history              |
 | Model Info CLI          | ✅ Implemented         | CLI tool for inspecting available models and their metadata                                        |
-| PostgreSQL Database      | ✅ Implemented         | Docker-based PostgreSQL with schema design, partitioning, and maintenance tools                   |
-| Backup & Restore Tools   | ✅ Implemented         | PowerShell scripts for database backup, restore, and scheduled maintenance                        |
+| PostgreSQL Database     | ✅ Implemented         | Docker-based PostgreSQL with schema design, partitioning, and maintenance tools                   |
+| Database Services       | ✅ Implemented         | Central DB service with specialized modules for metrics, models, users, and security               |
+| User Management         | ✅ Implemented         | User database service with session tracking and conversation history                               |
+| Security Service        | ✅ Implemented         | Authentication, authorization, rate limiting, and security monitoring                              |
+| Backup & Restore Tools  | ✅ Implemented         | PowerShell scripts for database backup, restore, and scheduled maintenance                        |
+| API Layer               | ⏳ In Progress         | FastAPI server with initial routes for LLM, models, metrics, and configuration                    |
+| Memory / RAG            | ⏳ In Progress         | Database structure implemented, integration with LLM pipeline in progress                          |
 | STT Pipeline            | ⏳ Planned             | Not yet implemented                                                                               |
 | TTS Output              | ⏳ Planned             | Not yet implemented                                                                               |
-| API Layer               | ⏳ In Progress         | FastAPI server with initial endpoints                                                             |
 | Dashboard               | ⏳ Planned             | Not yet implemented                                                                               |
-| Memory / RAG            | ⏳ Planned             | Not yet implemented                                                                               |
 | Agent Bus               | ⏳ Planned             | Not yet implemented                                                                               |
 | Wake-word & Packaging   | ⏳ Planned             | Not yet implemented                                                                               |
 
 ### Next Steps
 
-1. **Immediate Priority**: Complete API Layer Implementation
-   - Finalize FastAPI server with all core endpoints
-   - Implement WebSocket support for streaming responses
-   - Connect database for metrics logging and model management
-   - Add authentication and rate limiting
+1. **Immediate Priority**: Complete API Integration
+   - Finalize the integration of database services with API endpoints
+   - Implement WebSocket support for streaming LLM responses
+   - Add authentication middleware using the BigBrother security service
+   - Implement rate limiting for API endpoints
+   - Add comprehensive error handling and request validation
 
 2. **Short-term Roadmap**:
-   - Implement Memory/RAG with pgvector integration
-   - Add Python database integration for all components
+   - Complete Memory/RAG integration with LLM pipeline
+   - Finalize testing and optimization of database services
    - Build dashboard UI with Streamlit for monitoring
    - Begin STT pipeline using faster-whisper
 
@@ -181,15 +193,16 @@ Solo/
 | 3    | LLM runner wrapper     | ✅ llama.cpp integration with GPU support, interactive CLI, response sanitization                                   |
 | 3-4  | LLM enhancements       | ✅ Model management, prompt templates, response caching, conversation history                                       |
 | 4-5  | Database implementation| ✅ PostgreSQL with Docker, partitioning, schemas, backup/restore tools                                              |
-| 5-6  | API layer              | ⏳ FastAPI routes /chat /metrics /models                                                                            |
-| 6-7  | Memory / RAG           | ⏳ pgvector integration for production; Chroma for development                                                      |
-| 7-8  | STT mini-pipeline      | ⏳ Integrate faster-whisper; audio input to text                                                                    |
-| 8-9  | TTS output             | ⏳ Piper inference; voice selection by config                                                                       |
-| 9-10 | Dashboard v1           | ⏳ Streamlit panel reading /status and database metrics                                                             |
-| 10-11| Agent bus              | ⏳ CrewAI integration                                                                                               |
-| 11-12| Wake-word & packaging  | ⏳ Porcupine integration; installer scripts                                                                         |
+| 5-6  | Database services      | ✅ Specialized services for metrics, models, users, security, and caching                                           |
+| 6-7  | API layer integration  | ⏳ Connecting database services to API endpoints, security middleware                                               |
+| 7-8  | Memory / RAG           | ⏳ pgvector integration for production; Chroma for development                                                      |
+| 8-9  | STT mini-pipeline      | ⏳ Integrate faster-whisper; audio input to text                                                                    |
+| 9-10 | TTS output             | ⏳ Piper inference; voice selection by config                                                                       |
+| 10-11| Dashboard v1           | ⏳ Streamlit panel reading /status and database metrics                                                             |
+| 11-12| Agent bus              | ⏳ CrewAI integration                                                                                               |
+| 12-13| Wake-word & packaging  | ⏳ Porcupine integration; installer scripts                                                                         |
 
-Note: We've completed all the planned LLM functionality enhancements including model management, prompt engineering, and caching systems. The next phase focuses on Memory/RAG implementation to enable context-aware responses and document retrieval capabilities.
+Note: We've completed the development of specialized database services including user management, security (authentication, authorization, rate limiting), metrics logging, and model registry. The next phase focuses on integrating these services with the API layer and implementing the Memory/RAG functionality.
 
 
 ## 5. Environment & CI Details

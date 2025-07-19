@@ -10,14 +10,18 @@ Solo is a local-first voice assistant that combines speech recognition, text-to-
 - **Event Bus** - Asynchronous event-based communication between components - ✅ Implemented
 - **CLI Tester** - Interactive testing interface for LLM functionality - ✅ Implemented
 - **PostgreSQL Database** - Production-ready data storage with partitioning - ✅ Implemented
+- **Database Services** - Specialized services for users, models, metrics, and security - ✅ Implemented
+- **User Management** - User database with sessions and conversation history - ✅ Implemented
+- **Security Service** - Authentication, authorization, and rate limiting - ✅ Implemented
+- **API Layer** - FastAPI server with endpoint routes - ⏳ In Progress
+- **Memory / RAG** - Vector database integration - ⏳ In Progress
 - **STT** – real-time transcription using faster-whisper - ⏳ Planned
 - **TTS** – voice output powered by Piper - ⏳ Planned
-- **Memory** – Chroma vector database for retrieval‑augmented generation - ⏳ Planned
 - **Agent Bus** – CrewAI orchestration for multi‑agent workflows - ⏳ Planned
 - **Dashboard UI** - Streamlit metrics display - ⏳ Planned
 
 ## Implementation Status
-The project has successfully implemented core LLM functionality:
+The project has successfully implemented core LLM functionality and database services:
 - ✅ Event bus architecture for component communication
 - ✅ LLM runner with llama.cpp integration and GPU acceleration
 - ✅ Model management system with auto-detection and metadata extraction
@@ -29,9 +33,13 @@ The project has successfully implemented core LLM functionality:
 - ✅ Response sanitization and formatting for clean outputs
 - ✅ Interactive testing CLI with parameter customization
 - ✅ Model inspection tools for analyzing available models
-- ✅ PostgreSQL database integration with time-based partitioning and metrics tracking
+- ✅ PostgreSQL database with time-based partitioning and metrics tracking
+- ✅ Comprehensive database services for users, models, metrics, and security
+- ✅ User management with session tracking and conversation history
+- ✅ Security service with authentication, authorization, and rate limiting
 - ✅ Automated backup and restore tools for database management
-- ⏳ Memory and RAG integration planned next
+- ⏳ API integration with database services in progress
+- ⏳ Memory and RAG integration with pgvector in progress
 - ⏳ Speech components (STT/TTS) and additional features to follow
 
 ## Setup
@@ -78,15 +86,30 @@ The caching system improves performance by avoiding redundant computation:
 - Cache management utilities for clearing and refreshing
 
 ### PostgreSQL Database
-The PostgreSQL database provides robust data storage and metrics tracking:
-- Docker-based deployment for easy setup and portability
-- Logical schema organization (metrics, models, users, rag)
+The PostgreSQL database provides robust data storage with specialized services:
+- Central `DatabaseService` coordinating all database operations
+- Dedicated services for metrics, models, users, RAG, and caching
+- Security service (`BigBrother`) provides strong security features:
+  - Secure password handling with Argon2 hashing
+  - Rate limiting for sensitive operations
+  - TOTP-based multi-factor authentication
+  - Account lockout after failed attempts
+  - security event logging
+  - Password policy enforcement
+  - Password history tracking
+- User management with session tracking and conversation history
 - Time-based partitioning for high-volume metrics tables
-- Automated maintenance jobs with pg_cron
+- Automated maintenance with pg_cron
 - PowerShell tools for backup, restore, and scheduled maintenance
 - Vector storage for RAG functionality using pgvector
 - Comprehensive security with role-based access control
-- Detailed documentation for setup, maintenance, and common queries
+
+For database setup and management, refer to the documentation in the `docs/DB/` directory:
+- [POSTGRES_SETUP.md](docs/DB/POSTGRES_SETUP.md): Detailed guide for setting up PostgreSQL
+- [DATABASE_DESIGN.md](docs/DB/DATABASE_DESIGN.md): Schema design and data structures
+integration
+- [COMMON_QUERIES.md](docs/DB/COMMON_QUERIES.md): Reference for commonly used SQL queries
+- [SQL cheatsheet.md](docs/DB/SQL%20cheatsheet.md): SQL syntax reference for database operations
 
 ### Configuration
 Enhanced configuration system with validation and smart defaults:
