@@ -204,6 +204,63 @@ CREATE TABLE response_cache (
 CREATE INDEX idx_response_cache_expires_at ON response_cache(expires_at);
 ```
 
+### 6. Security
+
+```sql
+CREATE TABLE IF NOT EXISTS security.credentials (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL UNIQUE,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL,
+    password_hash TEXT NOT NULL,
+    totp_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    totp_secret TEXT,
+    last_password_change TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    account_locked BOOLEAN NOT NULL DEFAULT FALSE,
+    account_locked_until TIMESTAMPTZ,
+    password_reset_token TEXT,
+    password_reset_expires TIMESTAMPTZ,
+    failed_login_attempts INTEGER NOT NULL DEFAULT 0,
+    security_level INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS security.password_history (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    password_hash TEXT NOT NULL,
+    changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS security.login_attempts (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(255),
+    username VARCHAR(255) NOT NULL,
+    ip_address VARCHAR(45) NOT NULL,
+    user_agent TEXT,
+    success BOOLEAN NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS security.security_events (
+    id SERIAL PRIMARY KEY,
+    event_type VARCHAR(50) NOT NULL,
+    user_id VARCHAR(255),
+    username VARCHAR(255),
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    details JSONB,
+    timestamp TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_attempts_username ON security.login_attempts(username)
+CREATE INDEX IF NOT EXISTS idx_login_attempts_ip ON security.login_attempts(ip_address)
+CREATE INDEX IF NOT EXISTS idx_login_attempts_timestamp ON security.login_attempts(timestamp)
+CREATE INDEX IF NOT EXISTS idx_security_events_user_id ON security.security_events(user_id)
+CREATE INDEX IF NOT EXISTS idx_security_events_timestamp ON security.security_events(timestamp)
+```
+
 ## Database Migration Strategy
 
 For managing database migrations, we'll use Alembic with SQLAlchemy. This allows:

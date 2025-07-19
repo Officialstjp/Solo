@@ -15,6 +15,7 @@ from app.core.db.models_db import ModelsDatabase
 from app.core.db.users_db import UsersDatabase
 from app.core.db.rag_db import RAGDatabase
 from app.core.db.cache_db import CacheDatabase
+from app.core.db.big_brother import BigBrother
 from app.utils.logger import get_logger
 
 class DatabaseService:
@@ -36,6 +37,7 @@ class DatabaseService:
         self.users = UsersDatabase()
         self.rag = RAGDatabase()
         self.cache = CacheDatabase()
+        self.big_brother = BigBrother()
 
         self.logger.info("Database service initialized")
 
@@ -50,6 +52,7 @@ class DatabaseService:
             await self.users.initialize()
             await self.rag.initialize()
             await self.cache.initialize()
+            await self.big_brother.initialize()
 
             self.logger.info("Database connection pool initialized")
             return True

@@ -7,7 +7,7 @@ Change Log:
     18.07.2025      Init
 """
 
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union, Tuple
 import json
 import asyncpg
 import hashlib
@@ -15,8 +15,6 @@ import secrets
 import re
 from datetime import datetime, timedelta
 from pydantic import BaseModel, Field, EmailStr, validator
-from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError
 
 from app.core.db.connection import get_connection_pool
 from app.utils.logger import get_logger
@@ -99,85 +97,15 @@ class Message(MessageBase):
     tokens: Optional[int] = None
     metadata: Optional[Dict[str, Any]] = None
 
-# ======= Password Policy ========
-class PasswordPolicy:
-    """ Password policy configuration """
-    MIN_LENGTH = 12
-    REQUIRE_UPPERCASE = True
-    REQUIRE_LOWERCASE = True
-    REQUIRE_DIGITS = True
-    REQUIRE_SPECIAL = True
-    SPECIAL_CHARS = "!@#$%^&*()-_=+[]{}|;:'\",.<>?/"
-    MAX_REPEATED_CHARS = 3
-    CHECK_COMMON_PASSWORDS = True
-    COMMON_PASSWORDS_FILE = "common_passwords.txt"
-
-    @classMethod
-    def validate_password(cls, password: str) -> tuple[bool, str]:
-        """
-        Validate a password against the policy
-
-        Returns:
-            tuple: (is_valid: bool, message: str)
-        """
-        # check length
-        if len(password) < cls.MIN_LENGTH:
-            return False, f"Password must be at least {cls.MIN_LENGTH} characters long."
-
-        # check character requirements
-        if cls.REQUIRE_UPPERCASE and not any(c.isupper() for c in password):
-            return False, "Pasword must contain at least one uppercase letter"
-        if cls.REQUIRE_LOWERCASE and not any(c.islower() for c in password):
-            return False, "Password must contain at least one lowercase letter"
-        if cls.REQUIRE_DIGITS and not any(c.isdigit() for c in password):
-            return False, "Password must contain at least one digit"
-        if cls.REQUIRE_SPECIAL and not any(c in cls.SPECIAL_CHARS for c in password):
-            return False, f"Password must contain at least one special character."
-
-        # check for repeated characters
-        if cls.MAX_REPEATED_CHARS:
-            for i in range(len(password) - cls.MAX_REPEATED_CHARS + 1):
-                if len(set(password[i:i+cls.MAX_REPEATED_CHARS])) == 1:
-                    return False, f"Password cannot contain more than {cls.MAX_REPEATED_CHARS} repeated characters"
-
-        # check against common passwords list
-        if cls.CHECK_COMMON_PASSWORDS:
-            try:
-                with open(cls.COMMON_PASSWORDS_FILE, 'r') as f:
-                    common_passwords = set(line.strip() for line in f)
-                    if password.lowere() in common_passwords:
-                        return False, "Passord detected on common password list, please choose a different password."
-            except FileNotFoundError:
-                pass
-        return True, "Password meets all requirements"
-
-class UserCredentials(BaseModel):
-    """ User credentials with password validator """
-    username: str
-    password: str
-
-    @validator('password')
-    def validate_password(cls, value):
-        is_valid, reason = PasswordPolicy.validate_password(value)
-        if not is_valid:
-            raise ValueError(reason)
-        return value
-
 # ======= Database service class ========
-class UserDatabase:
+class UsersDatabase:
     """
     Database service for user management operations
     """
     def __init__(self):
         """ Initalize the logger at __init__ """
         self.logger = get_logger("users_db")
-        self.password_hasher = PasswordHasher(
-            time_cost=3,        # Number of iterations
-            memory_cost=65536,  # Memory usage in kibibytes (64MB)
-            parallelism=2,      # Number of threads to use
-            hash_len=32,        # Length of the hash in bytes
-            salt_len=16         # Length of the salt in bytes
-        )
+        self.logger.info("User DB service initialized.")
 
     async def initialize(self):
         """ Initalize the User DB service, get connection pool and check if schema exists"""
@@ -229,12 +157,13 @@ class UserDatabase:
             self.logger.error(f"Unexpected error during initialization: {e}")
 
     # ========== User operations ==========
-    async def create_user(self, user: UserCreate) -> Optional[User]:
+    async def create_user(self, user: UserCreate, password: str = None) -> Optional[User]:
         """
         Create a new User
 
         Args:
             user: UserCreate model with user data
+            password: Optional password (if using credentials system)
 
         Returns:
             User model if successful, None if otherwise
@@ -264,6 +193,21 @@ class UserDatabase:
                 result = await conn.fetchrow(userCreateSQL, user_id, full_name, json.dumps(preferences) if preferences else None)
 
                 if result:
+                    # if password is provided, create credentials
+                    if password is not None:
+                        from app.core.db.big_brother import BigBrother, UserCredentialCreate
+
+                        credential_create = UserCredentialCreate(
+                            user_id=user_id,
+                            username=username,
+                            email=email,
+                            password=password
+                        )
+
+                        cred_result = await BigBrother.create_user_credentials(credential_create)
+                        if not cred_result:
+                            raise ValueError("Failed to create user credentials")
+
                     # convert to pydantic
                     return User(
                         user_id=result['user_id'],
@@ -353,22 +297,37 @@ class UserDatabase:
             return False
 
     async def delete_user(self, user_id: str) -> bool:
-        """ delete a user """
+        """ Delete a user and their credentials """
         try:
             pool = await get_connection_pool()
             async with pool.acquire() as conn:
-                # prepare SQL delete statement
-                userDeleteSQL = """
-                    DELETE FROM users.users
-                    WHERE user_id = $1
+                async with conn.transaction():
+                    # Delete from users table
+                    userDeleteSQL = """
+                        DELETE FROM users.users
+                        WHERE user_id = $1
                     """
-                # execute delete query
-                result = await conn.execute(userDeleteSQL, user_id)
-                if result == "DELETE 0":
-                    self.logger.warning(f"User with id {user_id} does not exist.")
-                    return False
+                    user_result = await conn.execute(userDeleteSQL, user_id)
 
-                return True
+                    # Delete credentials if they exist
+                    credDeleteSQL = """
+                        DELETE FROM security.credentials
+                        WHERE user_id = $1
+                    """
+                    await conn.execute(credDeleteSQL, user_id)
+
+                    # Delete password history
+                    historyDeleteSQL = """
+                        DELETE FROM security.password_history
+                        WHERE user_id = $1
+                    """
+                    await conn.execute(historyDeleteSQL, user_id)
+
+                    if user_result == "DELETE 0":
+                        self.logger.warning(f"User with id {user_id} does not exist.")
+                        return False
+
+                    return True
         except Exception as e:
             self.logger.error(f"Failed to delete user: {str(e)}")
             return False
@@ -402,16 +361,186 @@ class UserDatabase:
             self.logger.error(f"Failed to list users: {str(e)}")
             return False
 
+    async def authenticate_user(self, username: str, password: str, ip_address: str, user_agent: str,
+                           totp_code: Optional[str] = None) -> Tuple[bool, Optional[User], str]:
+        """
+        Authenticate a user using credentials
+
+        Args:
+            username: Username
+            password: Password
+            ip_address: Client IP address
+            user_agent: Client user agent
+            totp_code: Time-based one-time password (if MFA enabled)
+
+        Returns:
+            Tuple[bool, Optional[User], str]: (success, user object if successful, message)
+        """
+        try:
+            # Use BigBrother for authentication
+            from app.core.db.big_brother import BigBrother
+
+            success, user_id, message = await BigBrother.authenticate(
+                username, password, ip_address, user_agent, totp_code
+            )
+
+            if success and user_id:
+                # Get the full user object
+                user = await self.get_user(user_id)
+                return True, user, message
+
+            return False, None, message
+
+        except Exception as e:
+            self.logger.error(f"Failed to authenticate user: {str(e)}")
+            return False, None, f"Authentication error: {str(e)}"
+
+    async def change_user_password(self, user_id: str, current_password: str, new_password: str,
+                             ip_address: str, user_agent: str) -> Tuple[bool, str]:
+        """
+        Change a user's password
+
+        Args:
+            user_id: User ID
+            current_password: Current password
+            new_password: New password
+            ip_address: Client IP address
+            user_agent: Client user agent
+
+        Returns:
+            Tuple[bool, str]: (success, message)
+        """
+        try:
+            from app.core.db.big_brother import BigBrother
+
+            success, message = await BigBrother.change_password(
+                user_id, current_password, new_password, ip_address, user_agent
+            )
+
+            return success, message
+
+        except Exception as e:
+            self.logger.error(f"Failed to change user password: {str(e)}")
+            return False, f"Password change error: {str(e)}"
+
+    # --------- MFA operations ---------
+    async def setup_user_mfa(self, user_id: str, username: str) -> Optional[Dict[str, Any]]:
+        """
+        Set up multi-factor authentication for a user
+
+        Args:
+            user_id: User ID
+            username: Username
+
+        Returns:
+            Optional[Dict]: MFA setup information including QR code
+        """
+        try:
+            from app.core.db.big_brother import BigBrother
+
+            totp_setup = await BigBrother.setup_totp(user_id, username)
+
+            if totp_setup:
+                return {
+                    "secret": totp_setup.secret,
+                    "uri": totp_setup.uri,
+                    "qr_code": totp_setup.qr_code
+                }
+            return None
+
+        except Exception as e:
+            self.logger.error(f"Failed to set up MFA: {str(e)}")
+            return None
+
+    async def enable_user_mfa(self, user_id: str, totp_secret: str, verification_code: str) -> bool:
+        """
+        Enable multi-factor authentication for a user
+
+        Args:
+            user_id: User ID
+            totp_secret: TOTP secret
+            verification_code: Verification code from TOTP app
+
+        Returns:
+            bool: Success status
+        """
+        try:
+            from app.core.db.big_brother import BigBrother
+
+            return await BigBrother.enable_totp(user_id, totp_secret, verification_code)
+
+        except Exception as e:
+            self.logger.error(f"Failed to enable MFA: {str(e)}")
+            return False
+
+    async def disable_user_mfa(self, user_id: str, password: str) -> bool:
+        """
+        Disable multi-factor authentication for a user
+
+        Args:
+            user_id: User ID
+            password: Current password for verification
+
+        Returns:
+            bool: Success status
+        """
+        try:
+            from app.core.db.big_brother import BigBrother
+
+            return await BigBrother.disable_totp(user_id, password)
+
+        except Exception as e:
+            self.logger.error(f"Failed to disable MFA: {str(e)}")
+            return False
+
+    # ---------- password resets ----------
+    async def request_password_reset(self, email: str, ip_address: str) -> Tuple[bool, str]:
+        """
+        Request a password reset
+
+        Args:
+            email: User email
+
+        Returns:
+            Tuple[bool, str]: (success, message or token)
+        """
+        try:
+            from app.core.db.big_brother import BigBrother
+            success, result = await BigBrother.create_password_reset_token(email, ip_address)
+            return success, result
+        except Exception as e:
+            self.logger.error(f"Failed to request password reset: {str(e)}")
+            return False, f"Password reset error: {str(e)}"
+
+    async def reset_password(self, token: str, new_password: str) -> Tuple[bool, str]:
+        """
+        Reset password using a token
+
+        Args:
+            token: Password reset token
+            new_password: New password
+
+        Returns:
+            Tuple[bool, str]: (success, message)
+        """
+        try:
+            from app.core.db.big_brother import BigBrother
+            return await BigBrother.reset_password_with_token(token, new_password)
+
+        except Exception as e:
+            self.logger.error(f"Failed to reset password: {str(e)}")
+            return False, f"Password reset error: {str(e)}"
+
     # ========== Session operations ==========
-    async def create_session(self, session: SessionCreate) -> Optional[Session]:
+    async def create_session(self, session: SessionCreate, ip_address: str = None, user_agent: str = None) -> Optional[Session]:
         """ Create a new session """
         try:
+            # Generate a session id
+            session_id = f"session_{secrets.token_hex(8)}"
+
             pool = await get_connection_pool()
             async with pool.acquire() as conn:
-                # generate a session id
-                session_id = f"session_{secrets.token_hex(8)}"
-
-                # convert Pydantic to dict
+                # Convert Pydantic to dict
                 session_dict = session.model_dump()
 
                 # Extract specific fields
@@ -424,10 +553,23 @@ class UserDatabase:
                     VALUES ($1, $2, $3)
                     RETURNING session_id, user_id, created_at, last_active, status, metadata
                 """
-                # execute query
-                result = await conn.fetchrow(sessionCreateSQL, session_id, user_id, json.dumps(metadata) if metadata else None)
+                # Execute query
+                result = await conn.fetchrow(sessionCreateSQL, session_id, user_id,
+                                            json.dumps(metadata) if metadata else None)
 
                 if result:
+                    # Log session creation as security event if tracking info provided
+                    if ip_address and user_agent and user_id:
+                        from app.core.db.big_brother import BigBrother, SecurityEvent
+
+                        await BigBrother.log_security_event(SecurityEvent(
+                            event_type="session_created",
+                            user_id=user_id,
+                            ip_address=ip_address,
+                            user_agent=user_agent,
+                            details={"session_id": session_id}
+                        ))
+
                     return Session(
                         session_id=result['session_id'],
                         user_id=result['user_id'],
@@ -439,7 +581,7 @@ class UserDatabase:
                 return None
         except Exception as e:
             self.logger.error(f"Failed to create session: {str(e)}")
-            return False
+            return None
 
     async def get_session(self, session_id: str) -> Optional[Session]:
         """ Get a session by ID """
@@ -855,23 +997,55 @@ class UserDatabase:
             self.logger.error(f"Failed to search messages: {str(e)}")
             return None
 
-    # ========== Utility functions ==========
-    # this should be secure enough? -> bigBrother to come
-    async def hash_password(self, password: str) -> str:
-        """ Hash a password using Argon2 """
-        try:
-            return self.password_hasher.hash(password)
-        except Exception as e:
-            self.logger.error(f"Failed to hash password: {str(e)}")
-            return None
+    async def lock_user_account(self, user_id: str, duration_minutes: int = 60,
+                           reason: str = "Administrative lock") -> Tuple[bool, str]:
+        """
+        Lock a user account
 
-    async def verify_password(self, password: str, hashed: str) -> bool:
-        """ Verify a password against a hashed value """
+        Args:
+            user_id: User ID
+            duration_minutes: Lock duration in minutes
+            reason: Reason for locking
+
+        Returns:
+            Tuple[bool, str]: (success, message)
+        """
         try:
-            self.password_hasher.verify(hashed, password)
-            return True
-        except VerifyMismatchError:
-            return False
+            from app.core.db.big_brother import BigBrother
+
+            security = BigBrother()
+            success, message = await security.lock_account(
+                user_id=user_id,
+                duration_minutes=duration_minutes,
+                reason=reason
+            )
+
+            return success, message
         except Exception as e:
-            self.logger.error(f"Failed to verify password: {str(e)}")
-            return False
+            self.logger.error(f"Failed to lock user account: {str(e)}")
+            return False, "Account lock failed due to an unexpected error."
+
+    async def unlock_user_account(self, user_id: str, admin_id: str = None) -> Tuple[bool, str]:
+        """
+        Unlock a user account
+
+        Args:
+            user_id: User ID
+            admin_id: Administrator ID performing the unlock (for audit)
+
+        Returns:
+            Tuple[bool, str]: (success, message)
+        """
+        try:
+            from app.core.db.big_brother import BigBrother
+
+            security = BigBrother()
+            success, message = await security.unlock_account(
+                user_id=user_id,
+                admin_id=admin_id
+            )
+
+            return success, message
+        except Exception as e:
+            self.logger.error(f"Failed to unlock user account: {str(e)}")
+            return False, "Account unlock failed due to an unexpected error."
