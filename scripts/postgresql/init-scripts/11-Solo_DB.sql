@@ -283,8 +283,8 @@ CREATE TABLE IF NOT EXISTS security.security_events (
     details JSONB,
     timestamp TIMESTAMPTZ NOT NULL
 );
-CREATE INDEX IF NOT EXISTS idx_security_events_user_id ON security.security_events(user_id)
-CREATE INDEX IF NOT EXISTS idx_security_events_timestamp ON security.security_events(timestamp)
+CREATE INDEX IF NOT EXISTS idx_security_events_user_id ON security.security_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_security_events_timestamp ON security.security_events(timestamp);
 
 -- Create function to automatically generate new partitions
 CREATE OR REPLACE FUNCTION metrics.create_partitions()
