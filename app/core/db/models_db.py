@@ -97,10 +97,11 @@ class ModelsDatabase:
     """
 
     def __init__(self):
-        """ Initalize the model database serrvice"""
+        """ initialize the logger at __init__"""
         self.logger = get_logger("models_db")
 
-    async def initialize (self):
+    async def initialize(self):
+        """ Initalize the DB, get connection_pool and check if schema exists"""
         try:
             pool = await get_connection_pool()
             async with pool.acquire() as conn:

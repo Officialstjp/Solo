@@ -23,6 +23,7 @@ pydantic = "^2.7"
 aioconsole = "^0.8.1"
 asyncpg = "^0.29.0"
 psycopg = "^2.9.0"
+argon2 = "^1.0"
 
 [tool.poetry.group.dev.dependencies]                    # - DEV + CI
 black = "^24.4"
