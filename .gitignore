@@ -27,6 +27,9 @@ docs/dev
 docs/Agents
 docs/code
 docs/llama
+docs/archive
+# draft
+docs/TESTING_STRATEGY.md
 
 # ============= PYTHON SECTION =====================
 # Source: https://github.com/github/gitignore/blob/main/Python.gitignore
