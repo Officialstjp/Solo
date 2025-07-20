@@ -9,8 +9,9 @@ History   :
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel, Emailstr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Dict, List, Optional, Any
+from datetime import datetime
 
 from app.core.db_service import DatabaseService
 from app.core.db.users_db import User, UserCreate
@@ -28,7 +29,7 @@ class LoginRequest(BaseModel):
 
 class RegistrationRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
-    email: Emailstr
+    email: EmailStr
     password: str = Field(..., min_length=12, max_length=100)
     full_name: Optional[str] = None
 
@@ -59,7 +60,7 @@ class TokenResponse(BaseModel):
     username: str
 
 class PasswordResetRequest(BaseModel):
-    email: Emailstr
+    email: EmailStr
 
 class PasswordResetConfirmReqeust(BaseModel):
     token: str
@@ -76,14 +77,14 @@ class PasswordResetConfirmReqeust(BaseModel):
 class UserProfile(BaseModel):
     user_id: str
     username: str
-    email: Emailstr
+    email: EmailStr
     full_name: Optional[str] = None
     is_active: bool = True
     is_admin: bool = False # we dont want to expose this in the API, but it's useful for internal logic
 
 class ProfileUpdateRequest(BaseModel):
     full_name: Optional[str] = None
-    email: Optional[Emailstr] = None
+    email: Optional[EmailStr] = None
     preferences: Optional[Dict[str, Any]] = None
 
 # User preferences model
@@ -123,11 +124,14 @@ def create_router(app: FastAPI) -> APIRouter:
 
             # check if the user already exists
             # this is handled in BigBrother's credential creation, but we can check here too
-            existingUser = await db_service.users_db.get_user_by_username(registration.username)
+            existingUser = await db_service.users.get_user_by_username(registration.username)
 
             if existingUser:
                 logger.warning(f"User {registration.username} already exists.")
-                return {"error": "User already exists"}, 400
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="User already exists"
+                )
 
             # create the user in the database
             user_create = UserCreate(
@@ -138,7 +142,7 @@ def create_router(app: FastAPI) -> APIRouter:
                 preferences=UserPreferences().dict()
             )
 
-            user = await db_service.users_db.create_user(
+            user = await db_service.users.create_user(
                 user=user_create,
                 password=registration.password
             )
@@ -150,15 +154,17 @@ def create_router(app: FastAPI) -> APIRouter:
                 )
 
             # log the registration success
-            await db_service.bigBrother.log_security_event(
+            from app.core.db.big_brother import SecurityEvent
+            await db_service.bigBrother.log_security_event(SecurityEvent(
                 event_type="user_registration",
                 user_id=user.user_id,
                 username=user.username,
                 ip_address=client_ip,
                 user_agent=user_agent,
-            )
+                timestamp=datetime.now()
+            ))
 
-            return User
+            return user
 
         except ValueError as ve:
             raise HTTPException(
@@ -286,7 +292,7 @@ def create_router(app: FastAPI) -> APIRouter:
     # User Profile Endpoints (protected by auth middleware)
     user_router = APIRouter(prefix="/users", tags=["Users"])
 
-    @user_router.get("/me", response_mmodel=User)
+    @user_router.get("/me", response_model=User)
     async def get_current_user(
         request: Request,
         db_service: DatabaseService = Depends(get_db_service)

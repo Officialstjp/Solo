@@ -23,12 +23,20 @@ from app.api.middleware import auth_middleware
 
 logger = get_logger(name="API_Factory", json_format=False)
 
-def create_app(db_service=None) -> FastAPI:
+def create_app(
+    db_service=None,
+    existing_model_service=None,
+    existing_event_bus=None,
+    existing_model_manager=None
+) -> FastAPI:
     """
     Create and configure a FastAPI application instance
 
     Args:
         db_service (DatabaseService): Database service instance
+        existing_model_service (ModelService, optional): Existing model service to use
+        existing_event_bus (EventBus, optional): Existing event bus to use
+        existing_model_manager (ModelManager, optional): Existing model manager to use
 
     Returns:
         FastAPI: Configured application instance
@@ -54,27 +62,44 @@ def create_app(db_service=None) -> FastAPI:
     )
     if db_service:
         app.middleware("http")(auth_middleware(db_service=db_service))
+    else:
+        logger.warning("No database service provided, authentication middleware will not be active")
 
-    event_bus = EventBus()
-    model_manager = ModelManager(
+    # Use existing services if provided, otherwise create new ones
+    event_bus = existing_event_bus if existing_event_bus else EventBus()
+    model_manager = existing_model_manager if existing_model_manager else ModelManager(
         models_dir=config.get_models_dir(),
         default_model=config.llm.model_path
     )
     prompt_library = PromptLibrary()
 
-    # Default model ID is the basename of the model path
-    default_model_id = os.path.basename(config.llm.model_path)
+    # Default model ID is the basename of the model path or use first available model
+    default_model_id = None
+    if config.llm.model_path:
+        default_model_id = os.path.basename(config.llm.model_path)
+    else:
+        # Try to get first available model
+        available_models = model_manager.list_available_models()
+        if available_models:
+            default_model_id = os.path.basename(available_models[0].path)
+            logger.info(f"No default model specified, using first available: {default_model_id}")
 
-    # Create model service (but don't initialize yet - that happens in startup event)
-    model_service = ModelService(
-        event_bus=event_bus,
-        model_manager=model_manager,
-        default_model_id=default_model_id,
-        max_models=config.llm.max_loaded_models if hasattr(config.llm, 'max_loaded_models') else 2
-    )
+    if not default_model_id:
+        logger.warning("No models found, model service will be initialized without a default model")
+        default_model_id = "default"  # Placeholder to avoid NoneType errors
+
+    # Use existing model service if provided, otherwise create a new one
+    model_service = existing_model_service
+    if not model_service:
+        logger.warning("No existing model service provided, creating a new one")
+        model_service = ModelService(
+            event_bus=event_bus,
+            model_manager=model_manager,
+            default_model_id=default_model_id,
+            max_models=config.llm.max_loaded_models if hasattr(config.llm, 'max_loaded_models') else 2
+        )
 
     # Store application state
-    app.state.config = config
     app.state.config = config
     app.state.event_bus = event_bus
     app.state.model_manager = model_manager
@@ -176,14 +201,14 @@ def create_app(db_service=None) -> FastAPI:
     from app.api.routes.models_endpoint import create_router as create_models_router
     from app.api.routes.llm_endpoint import create_router as create_llm_router
     from app.api.routes.config_endpoint import create_router as create_config_router
-    from app.api.routes.metrics_endpoint import create_router as create_metrics_router
+    #from app.api.routes.metrics_endpoint import create_router as create_metrics_router
     from app.api.routes.users_endpoint import create_router as create_users_router
     from app.api.routes.conversations_endpoint import create_router as create_conversations_router
 
     app.include_router(create_models_router(app))
     app.include_router(create_llm_router(app))
     app.include_router(create_config_router(app))
-    app.include_router(create_metrics_router(app))
+    #app.include_router(create_metrics_router(app))
     app.include_router(create_conversations_router(app))
     app.include_router(create_users_router(app))
 

@@ -13,8 +13,8 @@ import asyncpg
 from datetime import datetime
 from pydantic import BaseModel, Field
 
-from app.core.db.connection import get_connection_pool
-from app.utils.logger import get_logger
+from core.db.connection import get_connection_pool
+from utils.logger import get_logger
 
 # ===== Pydantic models ======
 
@@ -115,19 +115,16 @@ class ModelsDatabase:
 
                 # check if model_registry table exists
                 model_registry_exists = await conn.fetchval(
-                    "SELECT EXISTS(SELECT 1 FROM pg_tables WHERE schemaname  = 'models' AND tablename = 'model_registry')"
+                    "SELECT EXISTS(SELECT 1 FROM pg_tables WHERE schemaname = 'models' AND tablename = 'models')"
                 )
 
                 if not model_registry_exists:
-                    self.logger.warning("model_registry table doesnt exist. Model registry operations will be disabled")
+                    self.logger.warning("models.models table doesnt exist. Model registry operations will be disabled")
 
                 # Check if model_usage table exists
-                model_usage_exists = await conn.fetchval(
-                    "SELECT EXISTS(SELECT 1 FROM pg_tables WHERE schemaname = 'models' AND tablename = 'model_usage')"
-                )
-
-                if not model_usage_exists:
-                    self.logger.warning("model_usage table doesn't exist. Model usage tracking will be disabled.")
+                # The model_usage table will be created when needed, so we don't need to check for it yet
+                # Just log a warning for now
+                self.logger.warning("model_usage table doesn't exist. Model usage tracking will be disabled.")
 
             self.logger.info("Models database service initialized")
             return True
@@ -156,7 +153,7 @@ class ModelsDatabase:
             async with pool.acquire() as conn:
                 # check if the model already exists
                 existing = await conn.fetchval(
-                    "SELECT 1 FROM models.model_registry WHERE model_id = $1",
+                    "SELECT 1 FROM models.models WHERE model_id = $1",
                     model.model_id
                 )
 
@@ -188,7 +185,7 @@ class ModelsDatabase:
                     placeholders = ", ".join([f"${i+1}" for i in range(len(model_dict))])
 
                     query = f"""
-                        INSERT INTO models.model_registry
+                        INSERT INTO models.models
                         ({columns}, created_at, updated_at)
                         VALUES ({placeholders}, NOW(), NOW())
                         """
@@ -216,7 +213,7 @@ class ModelsDatabase:
             pool = await get_connection_pool()
             async with pool.acquire() as conn:
                 record = await conn.fetchrow("""
-                    SELECT * FROM models.model_registry
+                    SELECT * FROM models.models
                     WHERE model_id = $1
                     """, model_id)
 
@@ -248,7 +245,7 @@ class ModelsDatabase:
             ModelsResponse with models list and count
         """
         try:
-            query = "SELECT * FROM models.model_registry"
+            query = "SELECT * FROM models.models"
             params = []
 
             # Add filters if provided
@@ -315,7 +312,7 @@ class ModelsDatabase:
 
                         # Delete from registry
                         result = await conn.execute(
-                            "DELETE FROM models.model_registry WHERE model_id = $1",
+                            "DELETE FROM models.models WHERE model_id = $1",
                             model_id
                         )
 
@@ -508,7 +505,7 @@ class ModelsDatabase:
             async with pool.acquire() as conn:
                 # Check if model exists
                 exists = await conn.fetchval(
-                    "SELECT 1 FROM models.model_registry WHERE model_id = $1",
+                    "SELECT 1 FROM models.models WHERE model_id = $1",
                     model_id
                 )
 
@@ -536,7 +533,7 @@ class ModelsDatabase:
 
                 # Fetch the updated model
                 record = await conn.fetchrow(
-                    "SELECT * FROM models.model_registry WHERE model_id = $1",
+                    "SELECT * FROM models.models WHERE model_id = $1",
                     model_id
                 )
 

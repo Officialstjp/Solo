@@ -16,8 +16,8 @@ import re
 from datetime import datetime, timedelta
 from pydantic import BaseModel, Field, EmailStr, validator
 
-from app.core.db.connection import get_connection_pool
-from app.utils.logger import get_logger
+from core.db.connection import get_connection_pool
+from utils.logger import get_logger
 
 # ======= Pydantic models ========
 
@@ -112,42 +112,43 @@ class UsersDatabase:
         try:
             pool = await get_connection_pool()
             async with pool.acquire() as conn:
-                SQLBase = "SELECT EXISTS(SELECT 1 from pg_namespace WHERE nspname = 'users'"
-                SQLclose = ")"
+                # Check if users schema exists
+                schema_sql = "SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'users')"
+                schema_exists = await conn.fetchval(schema_sql)
 
-                schema_exists = await conn.fetchval(
-                    SQLBase + SQLclose
-                )
                 if not schema_exists:
                     self.logger.warning("Users schema doesn't exist, Some model operations may fail.")
+                    return True  # Continue anyway
 
-                usersSQL = SQLBase + " AND tablename = 'users'" + SQLclose
-                users_exists = await conn.fetchval(
-                    usersSQL
-                )
+                # Check if tables exist in the users schema
+                # Use information_schema.tables which is standard SQL
+                table_base_sql = """
+                    SELECT EXISTS(
+                        SELECT 1 FROM information_schema.tables
+                        WHERE table_schema = 'users' AND table_name = $1
+                    )
+                """
+
+                # Check users table
+                users_exists = await conn.fetchval(table_base_sql, 'users')
                 if not users_exists:
                     self.logger.warning("Users table doesn't exist, Some model operations may fail.")
 
-                sessionsSQL = SQLBase + " AND tablename = 'sessions'" + SQLclose
-                sessions_exists = await conn.fetchval(
-                    sessionsSQL
-                )
+                # Check sessions table
+                sessions_exists = await conn.fetchval(table_base_sql, 'sessions')
                 if not sessions_exists:
                     self.logger.warning("Sessions table doesn't exist, Some model operations may fail.")
 
-                conversationsSQL = SQLBase + " AND tablename = 'conversations'" + SQLclose
-                conversations_exists = await conn.fetchval(
-                    conversationsSQL
-                )
+                # Check conversations table
+                conversations_exists = await conn.fetchval(table_base_sql, 'conversations')
                 if not conversations_exists:
                     self.logger.warning("Conversations table doesn't exist, Some model operations may fail.")
 
-                messagesSQL = SQLBase + " AND tablename = 'messages'" + SQLclose
-                messages_exists = await conn.fetchval(
-                    messagesSQL
-                )
+                # Check messages table
+                messages_exists = await conn.fetchval(table_base_sql, 'messages')
                 if not messages_exists:
                     self.logger.warning("Messages table doesn't exist, Some model operations may fail.")
+
             self.logger.info("Users database service initialized successfully.")
             return True
         except asyncpg.PostgresError as e:
@@ -155,6 +156,7 @@ class UsersDatabase:
             raise
         except Exception as e:
             self.logger.error(f"Unexpected error during initialization: {e}")
+            return False
 
     # ========== User operations ==========
     async def create_user(self, user: UserCreate, password: str = None) -> Optional[User]:
@@ -204,11 +206,18 @@ class UsersDatabase:
                             password=password
                         )
 
-                        cred_result = await BigBrother.create_user_credentials(credential_create)
+                        cred_result = await BigBrother().create_user_credentials(credential_create)
                         if not cred_result:
                             raise ValueError("Failed to create user credentials")
 
                     # convert to pydantic
+                    user_preferences = result['preferences']
+                    if isinstance(user_preferences, str):
+                        try:
+                            user_preferences = json.loads(user_preferences)
+                        except json.JSONDecodeError:
+                            user_preferences = None
+
                     return User(
                         user_id=result['user_id'],
                         username=username,
@@ -216,7 +225,7 @@ class UsersDatabase:
                         full_name=result['name'],
                         created_at=result['created_at'],
                         last_active=result['last_active'],
-                        preferences=result['preferences']
+                        preferences=user_preferences
                     )
                 return None
         except Exception as e:
@@ -236,21 +245,44 @@ class UsersDatabase:
         try:
             pool = await get_connection_pool()
             async with pool.acquire() as conn:
+                # First, get credentials information
+                credSQL = """
+                    SELECT username, email
+                    FROM security.credentials
+                    WHERE user_id = $1
+                """
+                cred_result = await conn.fetchrow(credSQL, user_id)
+
+                if not cred_result:
+                    return None
+
+                username = cred_result['username']
+                email = cred_result['email']
+
+                # Then get user details
                 userSQL = """
-                    SELECT user_id, username, email, full_name, created_at, last_active, preferences
+                    SELECT user_id, name as full_name, created_at, last_active, preferences
                     FROM users.users
                     WHERE user_id = $1
                 """
                 result = await conn.fetchrow(userSQL, user_id)
                 if result:
+                    # Parse preferences if it's a string
+                    user_preferences = result['preferences']
+                    if isinstance(user_preferences, str):
+                        try:
+                            user_preferences = json.loads(user_preferences)
+                        except json.JSONDecodeError:
+                            user_preferences = None
+
                     return User(
-                        user_id = result['user_id'],
-                        username = result['username'],
-                        email = result['email'],
-                        full_name = result['full_name'],
-                        created_at = result['created_at'],
-                        last_active = result['last_active'],
-                        preferences = result['preferences']
+                        user_id=result['user_id'],
+                        username=username,
+                        email=email,
+                        full_name=result['full_name'],
+                        created_at=result['created_at'],
+                        last_active=result['last_active'],
+                        preferences=user_preferences
                     )
                 return None
         except Exception as e:
@@ -270,21 +302,44 @@ class UsersDatabase:
         try:
             pool = await get_connection_pool()
             async with pool.acquire() as conn:
-                userSQL = """
-                    SELECT user_id, username, email, full_name, created_at, last_active, preferences
-                    FROM users.users
+                # First, get user_id from credentials table
+                credSQL = """
+                    SELECT user_id, email
+                    FROM security.credentials
                     WHERE username = $1
                 """
-                result = await conn.fetchrow(userSQL, username)
+                cred_result = await conn.fetchrow(credSQL, username)
+
+                if not cred_result:
+                    return None
+
+                user_id = cred_result['user_id']
+                email = cred_result['email']
+
+                # Then get user details
+                userSQL = """
+                    SELECT user_id, name as full_name, created_at, last_active, preferences
+                    FROM users.users
+                    WHERE user_id = $1
+                """
+                result = await conn.fetchrow(userSQL, user_id)
                 if result:
+                    # Parse preferences if it's a string
+                    user_preferences = result['preferences']
+                    if isinstance(user_preferences, str):
+                        try:
+                            user_preferences = json.loads(user_preferences)
+                        except json.JSONDecodeError:
+                            user_preferences = None
+
                     return User(
                         user_id=result['user_id'],
-                        username=result['username'],
-                        email=result['email'],
+                        username=username,  # Use the username from input
+                        email=email,        # Use email from credentials
                         full_name=result['full_name'],
                         created_at=result['created_at'],
                         last_active=result['last_active'],
-                        preferences=result['preferences']
+                        preferences=user_preferences
                     )
                 return None
         except Exception as e:
@@ -371,29 +426,52 @@ class UsersDatabase:
         try:
             pool = await get_connection_pool()
             async with pool.acquire() as conn:
-                # prepare SQL select statement
-                userListSQL = """
-                    SELECT user_id, username, email, full_name, created_at, last_active, preferences
+                # Get user IDs first
+                userIdsSQL = """
+                    SELECT user_id, name as full_name, created_at, last_active, preferences
                     FROM users.users
                     ORDER BY created_at DESC
                     LIMIT $1 OFFSET $2
                 """
-                # execute select query
-                results = await conn.fetch(userListSQL, limit, offset)
-                if results:
-                    return [User(
-                        user_id=result['user_id'],
-                        username=result['username'],
-                        email=result['email'],
-                        full_name=result['full_name'],
-                        created_at=result['created_at'],
-                        last_active=result['last_active'],
-                        preferences=result['preferences']
-                    ) for result in results]
-                return []
+                # Get basic user info
+                user_results = await conn.fetch(userIdsSQL, limit, offset)
+
+                # Build a list of users
+                users = []
+                for user_result in user_results:
+                    user_id = user_result['user_id']
+
+                    # Get credentials for each user
+                    credSQL = """
+                        SELECT username, email
+                        FROM security.credentials
+                        WHERE user_id = $1
+                    """
+                    cred_result = await conn.fetchrow(credSQL, user_id)
+
+                    if cred_result:
+                        # Parse preferences if it's a string
+                        user_preferences = user_result['preferences']
+                        if isinstance(user_preferences, str):
+                            try:
+                                user_preferences = json.loads(user_preferences)
+                            except json.JSONDecodeError:
+                                user_preferences = None
+
+                        users.append(User(
+                            user_id=user_id,
+                            username=cred_result['username'],
+                            email=cred_result['email'],
+                            full_name=user_result['full_name'],
+                            created_at=user_result['created_at'],
+                            last_active=user_result['last_active'],
+                            preferences=user_preferences
+                        ))
+
+                return users
         except Exception as e:
             self.logger.error(f"Failed to list users: {str(e)}")
-            return False
+            return []
 
     async def change_user_password(self, user_id: str, current_password: str, new_password: str,
                              ip_address: str, user_agent: str) -> Tuple[bool, str]:

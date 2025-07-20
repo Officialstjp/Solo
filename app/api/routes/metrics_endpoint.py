@@ -2,11 +2,11 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Dict, List, Optional, Any
 import time
-import psutil
+#import psutil
 
-from app.api.server import metrics, start_time
+#from app.api.server import metrics, start_time
 
-router = APIRouter(prefix="\metrics", tags=["Metrics"])
+router = APIRouter(prefix="/metrics", tags=["Metrics"])
 
 class SystemMetrics(BaseModel):
     cpu_percent: float
@@ -38,11 +38,8 @@ class MetricsResponse(BaseModel):
 
 async def fetch_system_metrics():
     try:
-        cpu_percent = psutil.cpu_percent(interval=0.1)
-        memory = psutil.virtual_memory
-        uptime = time.time() - start_time
-        # gpu =
-        # system uptime =
+        """
+        # cpu_percent =
 
         system_metrics = SystemMetrics(
             cpu_percent=cpu_percent,
@@ -58,6 +55,7 @@ async def fetch_system_metrics():
             system_uptime_seconds=None,
             app_uptime_seconds=uptime
         )
+        """
 
     except Exception as e:
         system_metrics = SystemMetrics(

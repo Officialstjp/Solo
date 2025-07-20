@@ -9,10 +9,10 @@ import os
 from typing import Dict, Any, Optional, List, Set
 import uuid
 
-from app.utils.logger import get_logger
-from app.utils.events import EventBus, EventType, Event, ModelLoadRequestEvent, ModelLoadedEvent, ModelUnloadedEvent
-from app.core.model_manager import ModelManager
-from app.core.llm_runner import LlamaModel
+from utils.logger import get_logger
+from utils.events import EventBus, EventType, ModelLoadRequestEvent, ModelLoadedEvent, ModelUnloadedEvent
+from core.model_manager import ModelManager
+from core.llm_runner import LlamaModel
 
 class ModelService:
     """
@@ -57,13 +57,29 @@ class ModelService:
         """ Initialize the model service and load default model """
         self.logger.info("Initializing model service")
 
-        asyncio.create_task(self._listen_for_model_events()) # start listenting for model events
+        # Start listening for model events
+        listen_task = asyncio.create_task(self._listen_for_model_events())
 
+        # Start maintenance task
         self.maintenance_task = asyncio.create_task(self._run_maintenance())
 
+        # Load default model
         await self.get_model(self.default_model_id)
 
         self.logger.info("Model service initialized")
+
+        # Keep this component running indefinitely
+        try:
+            # Use an event to wait forever unless cancelled
+            stop_event = asyncio.Event()
+            await stop_event.wait()
+        except asyncio.CancelledError:
+            self.logger.info("Model service initialization cancelled")
+            raise
+        finally:
+            # Ensure cleanup if the task is cancelled
+            if listen_task and not listen_task.done():
+                listen_task.cancel()
 
     async def _run_maintenance(self):
         """ Peridocially check for and unload unused models """
@@ -101,7 +117,7 @@ class ModelService:
             self.logger.info(f"Recieved request to load model: {model_id} (priority: {priority})")
             model = await self.get_model(model_id, priority=priority)
 
-            model_info = self.model_manager(model_id)
+            model_info = self.model_manager.get_model_info(model_id)
             await self.event_bus.publish(ModelLoadedEvent(
                 model_id=model_id,
                 success=True,
@@ -146,13 +162,45 @@ class ModelService:
         # need to load the model
         self.loading_models.add(model_id)
         try:
-            model_info = self.model_manager.get_model.get_model(model_id)
+            model_info = self.model_manager.get_model_info(model_id)
             if not model_info:
-                raise ValueError(f"Model {model_id} not found")
+                # Try to find by basename if model_id is a filename
+                available_models = self.model_manager.list_available_models()
+                found_model = None
+                for model in available_models:
+                    if os.path.basename(model.path) == model_id or model.name == model_id:
+                        found_model = model
+                        break
 
-            model_path = model_info.get("path")
+                if found_model:
+                    model_info = found_model
+                    self.logger.info(f"Found model {model_id} by name match: {model_info.name}")
+                elif len(available_models) > 0:
+                    # Fall back to first available model
+                    model_info = available_models[0]
+                    self.logger.warning(f"Model {model_id} not found. Falling back to {model_info.name}")
+                else:
+                    self.logger.error(f"Model {model_id} not found and no fallback models available")
+                    raise ValueError(f"Model {model_id} not found and no fallback models available")
+
+            model_path = model_info.path
             if not model_path:
                 raise ValueError(f"Model path not found for {model_id}")
+
+            if not os.path.exists(model_path):
+                self.logger.error(f"Model file not found at {model_path}")
+                # If this is the default model, try to fall back to any available model
+                if model_id == self.default_model_id:
+                    available_models = [m for m in self.model_manager.list_available_models()
+                                       if os.path.exists(m.path)]
+                    if available_models:
+                        model_info = available_models[0]
+                        model_path = model_info.path
+                        self.logger.warning(f"Falling back to available model: {model_info.name}")
+                    else:
+                        raise FileNotFoundError(f"Model file {model_path} not found and no fallback models available")
+                else:
+                    raise FileNotFoundError(f"Model file {model_path} not found")
 
             if len(self.models) >= self.max_models:
                 await self._make_space_for_model(priority)
@@ -178,7 +226,7 @@ class ModelService:
         Args:
             priority: Wheter this is a priority request
         """
-        sorte_models = sorted(self.model_last_used.items(), key=lambda x: x[1])
+        sorted_models = sorted(self.model_last_used.items(), key=lambda x: x[1])
 
         # Don't unload the default model unless it's a priority request or it's the only one
         if not priority and len(sorted_models) > 1:

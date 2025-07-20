@@ -37,7 +37,7 @@ def create_router(app: FastAPI) -> APIRouter:
     router = APIRouter(prefix="/models", tags=["Models"])
 
     """ list all models """
-    @router.get("/list", response_model=List[Dict[str, any]])
+    @router.get("/list", response_model=List[Dict[str, Any]])
     async def list_models(
         model_manager: ModelManager = Depends(get_model_manager)
     ):

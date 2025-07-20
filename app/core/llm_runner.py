@@ -23,7 +23,6 @@ from utils.events import EventBus, EventType, LLMRequestEvent, LLMResponseEvent,
 from core.model_manager import ModelManager, ModelInfo, ModelFormat
 from core.prompt_templates import PromptLibrary, PromptTemplate
 from core.model_cache import ResponseCache
-from core.model_service import ModelService
 
 class LlamaModel:
     """ Wrapper for llama.cpp model inference """
@@ -216,6 +215,7 @@ class LlamaModel:
 class LLMRunner:
     """ Main LLM runner component that interfaces with the event bus """
 
+    from core.model_service import ModelService
     def __init__(
         self,
         event_bus: EventBus,

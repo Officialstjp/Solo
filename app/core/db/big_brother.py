@@ -27,8 +27,9 @@ from argon2.exceptions import VerifyMismatchError
 from pydantic import BaseModel, Field, EmailStr, validator
 import ipaddress
 import pyotp
-from app.core.db.connection import get_connection_pool
-from app.utils.logger import get_logger
+
+from core.db.connection import get_connection_pool
+from utils.logger import get_logger
 
 # ======= Pydantic models =======
 
@@ -63,6 +64,7 @@ class UserCredentialCreate(BaseModel):
     username: str
     password: str
     email: EmailStr
+    totp_enabled: bool = False
 
     @validator('password')
     def validate_password(cls, value):
@@ -405,6 +407,60 @@ class BigBrother:
 
     # ======= Authentication =======
 
+    async def validate_token(self, token: str, ip_address: str, user_agent: str) -> Optional[Dict[str, Any]]:
+        """
+        Validate a JWT token and return user information if valid
+
+        Args:
+            token: The JWT token to validate
+            ip_address: The IP address of the client
+            user_agent: The user agent of the client
+
+        Returns:
+            Optional[Dict[str, Any]]: User information if token is valid, None otherwise
+        """
+        try:
+            # For now, just return a mock user for testing
+            # In a real implementation, this would verify the JWT token
+            # and retrieve the user from the database
+            self.logger.info(f"Token validation requested from {ip_address}")
+
+            # Mock implementation for development - always succeeds
+            # TODO: Implement proper JWT validation
+            mock_user = {
+                "user_id": "12345",
+                "username": "test_user",
+                "email": "test@example.com",
+                "roles": ["user"],
+                "permissions": ["read:all", "write:own"],
+                "is_active": True
+            }
+
+            # Log the validation event
+            await self.log_security_event(SecurityEvent(
+                event_type="token_validation_success",
+                user_id=mock_user["user_id"],
+                username=mock_user["username"],
+                ip_address=ip_address,
+                user_agent=user_agent,
+                details={"token_prefix": token[:10] + "..." if token else None}
+            ))
+
+            return mock_user
+
+        except Exception as e:
+            self.logger.error(f"Error validating token: {str(e)}")
+
+            # Log the failed validation
+            await self.log_security_event(SecurityEvent(
+                event_type="token_validation_failure",
+                ip_address=ip_address,
+                user_agent=user_agent,
+                details={"error": str(e), "token_prefix": token[:10] + "..." if token else None}
+            ))
+
+            return None
+
     async def create_user_credentials(self, credentials: UserCredentialCreate) -> Optional[str]:
         """
         Create user credentials
@@ -671,7 +727,7 @@ class BigBrother:
                 # verify current password
                 try:
                     self.password_hasher.verify(user_creds['password_hash'], current_password)
-                except VerifMismatchError:
+                except VerifyMismatchError:
                     return False, "Current password is incorrect."
 
                 # check if new password is same as current or in history
@@ -694,7 +750,7 @@ class BigBrother:
                         self.password_hasher.verify(history_record['password_hash'], new_password)
                         # if verification succeeds, password is in history
                         return False, f"Password has been used in the last {PasswordPolicy.PASSWORD_HISTORY_COUNT} changes. Please choose a different password."
-                    except VerifMismatchError:
+                    except VerifyMismatchError:
                         # this is good, password is not in history
                         pass
 
@@ -762,23 +818,32 @@ class BigBrother:
                 totp_uri = pyotp.totp.TOTP(totp_secret).provisioning_uri(name=username, issuer_name="SoloApp")
 
                 # Generate QR code (base64 encoded)
-                import qrcode
-                import base64
-                from io import BytesIO
+                qr_code_base64 = None
+                try:
+                    import qrcode
+                    import base64
+                    from io import BytesIO
 
-                qr = qrcode.QRCode(
-                    version=1,
-                    error_correction=qrcode.constants.ERROR_CORRECT_L,
-                    box_size=10,
-                    border=4,
-                )
-                qr.add_data(totp_uri)
-                qr.make(fit=True)
+                    qr = qrcode.QRCode(
+                        version=1,
+                        error_correction=qrcode.constants.ERROR_CORRECT_L,
+                        box_size=10,
+                        border=4,
+                    )
+                    qr.add_data(totp_uri)
+                    qr.make(fit=True)
 
-                img = qr.make_image(fill_color="black", back_color="white")
-                buffer = BytesIO()
-                img.save(buffer, format="PNG")
-                qr_code_b64 = base64.b64encode(buffer.getvalue()).decode()
+                    img = qr.make_image(fill_color="black", back_color="white")
+                    buffer = BytesIO()
+                    img.save(buffer, format="PNG")
+                    qr_code_b64 = base64.b64encode(buffer.getvalue()).decode()
+                except ImportError:
+                    # QR code generation is optional
+                    self.logger.warning("QR code generation failed: qrcode package not installed")
+                    qr_code_b64 = None
+                except Exception as e:
+                    self.logger.warning(f"QR code generation failed: {str(e)}")
+                    qr_code_b64 = None
 
                 return TOTPSetup(
                     secret=totp_secret,
@@ -866,7 +931,7 @@ class BigBrother:
                 # verify current password
                 try:
                     self.password_hasher.verify(user_creds['password_hash'], password)
-                except VerifMismatchError:
+                except VerifyMismatchError:
                     return False
 
                 # update user credentials to disable TOTP
@@ -1047,7 +1112,7 @@ class BigBrother:
                             self.password_hasher.verify(history_record['password_hash'], new_password)
                             # if verification succeeds, password is in history
                             return False, f"Password has been used in the last {PasswordPolicy.PASSWORD_HISTORY_COUNT} changes. Please choose a different password."
-                        except VerifMismatchError:
+                        except VerifyMismatchError:
                             # password is not in history
                             pass
 
@@ -1092,11 +1157,11 @@ class BigBrother:
             pool = await get_connection_pool()
             async with pool.acquire() as conn:
                 InsertEventQuery = """
-                    INSERT INTO security.security_events (event_type, user_id, username, ip_address, user_agent, details)
-                    VALUES ($1, $2, $3, $4, $5, $6)
+                    INSERT INTO security.security_events (event_type, user_id, username, ip_address, user_agent, details, timestamp)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
                 """
                 await conn.execute(InsertEventQuery, event.event_type, event.user_id, event.username,
-                                   event.ip_address, event.user_agent, json.dumps(event.details or {}))
+                                   event.ip_address, event.user_agent, json.dumps(event.details or {}), event.timestamp)
 
                 # Log to application log for critical events
                 critical_events = [

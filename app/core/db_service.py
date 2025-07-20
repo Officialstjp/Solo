@@ -9,14 +9,14 @@ from contextlib import asynccontextmanager
 import asyncio
 import functools
 
-from app.core.db.connection import get_connection_pool, get_sync_connection
-from app.core.db.metrics_db import MetricsDatabase
-from app.core.db.models_db import ModelsDatabase
-from app.core.db.users_db import UsersDatabase
-from app.core.db.rag_db import RAGDatabase
-from app.core.db.cache_db import CacheDatabase
-from app.core.db.big_brother import BigBrother
-from app.utils.logger import get_logger
+from core.db.connection import get_connection_pool, get_sync_connection
+from core.db.metrics_db import MetricsDatabase
+from core.db.models_db import ModelsDatabase
+from core.db.users_db import UsersDatabase
+#from core.db.rag_db import RAGDatabase
+#from core.db.cache_db import CacheDatabase
+from core.db.big_brother import BigBrother
+from utils.logger import get_logger
 
 class DatabaseService:
     """
@@ -35,8 +35,8 @@ class DatabaseService:
         self.metrics = MetricsDatabase()
         self.models = ModelsDatabase()
         self.users = UsersDatabase()
-        self.rag = RAGDatabase()
-        self.cache = CacheDatabase()
+        #self.rag = RAGDatabase()
+        #self.cache = CacheDatabase()
         self.bigBrother = BigBrother()
 
         self.logger.info("Database service initialized")
@@ -44,14 +44,21 @@ class DatabaseService:
     async def initialize(self):
         """ Initialize the database connection pool"""
         try:
-            self.logger.info("Initializing databse connection pool")
-            await get_connection_pool(self.connection_string)
+            self.logger.info("Initializing database connection pool")
+            # Create pool with the connection string from init
+            if self.connection_string:
+                # Use the provided connection string
+                await get_connection_pool(self.connection_string)
+            else:
+                # No connection string provided, use default
+                self.logger.warning("No connection string provided, using environment variables")
+                await get_connection_pool()
 
             await self.metrics.initialize()
             await self.models.initialize()
             await self.users.initialize()
-            await self.rag.initialize()
-            await self.cache.initialize()
+            #await self.rag.initialize()
+            #await self.cache.initialize()
             await self.bigBrother.initialize()
 
             self.logger.info("Database connection pool initialized")
@@ -119,10 +126,3 @@ class DatabaseService:
         except Exception as e:
             self.logger.error(f"Database connection test failed: {e}")
             return False
-
-    async def run(self):
-        """ Run the database service """
-        await self.initialize()
-
-        while True:
-            await asyncio.sleep(3600)

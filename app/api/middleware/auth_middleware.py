@@ -40,12 +40,14 @@ class AuthMiddleware:
             "/openapi.json",
             "/redoc",
             "/auth/login",
+            "/auth/register",
             "/auth/forgot-password",
             "/auth/reset-password",
         ]
         self.exclude_prefixes = exclude_prefixes or [
             "/static/",
-            "/metrics/" # Exclude metrics endpoint - can be secured separately
+            "/metrics/", # Exclude metrics endpoint - can be secured separately
+            "/auth/"     # Allow all authentication-related endpoints
         ]
         logger.info("Auth middleware initialized")
 
