@@ -8,7 +8,6 @@ History   :
     2025-06-15      Updated to use enhanced model management
 
 """
-# time: about 110h, 13.07.25 19:30, curr daily: 4:00
 
 import asyncio
 import signal
