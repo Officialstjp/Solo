@@ -11,27 +11,22 @@ scripts/.python-version
 
 # in case
 temp/
-
-# dev llama documentation
-llama-cpp-python · PyPI.pdf
 rhasspy_piper_ A fast, local neural text to speech system.pdf
 
 tests/scratchpad.py
 tests/scratchpad copy.py
-llama_cpp.py
 
 # local model directory
 models/
 models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
 
-docs/Mistral 7B LLM _ Prompt Engineering Guide.pdf
 /cache
-
 .github/instructions/copilot.instructions.md
-docs/llama/Mistral 7B LLM _ Prompt Engineering Guide.pdf
+
 docs/dev
 docs/Agents
 docs/code
+docs/llama
 
 # ============= PYTHON SECTION =====================
 # Source: https://github.com/github/gitignore/blob/main/Python.gitignore
