@@ -4,4 +4,4 @@ Purpose: Database package initialization
 """
 
 # Import main classes for easier access
-from app.core.db.connection import get_connection_pool, get_sync_connection, close_pool
+from core.db.connection import get_connection_pool, get_sync_connection, close_pool

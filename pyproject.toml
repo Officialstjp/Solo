@@ -20,10 +20,12 @@ crewai = "^0.22"                                        # multi-agent bus
 python-dotenv = "^1.0"
 structlog = "^24.1"
 pydantic = "^2.7"
+email-validator = "^2.1.0"                              # Required for pydantic's EmailStr
 aioconsole = "^0.8.1"
 asyncpg = "^0.29.0"
 psycopg = "^2.9.0"
-argon2 = "^1.0"
+argon2-cffi = "^23.1.0"                                 # For password hashing
+pyotp = "^2.9.0"                                        # MFA
 
 [tool.poetry.group.dev.dependencies]                    # - DEV + CI
 black = "^24.4"
