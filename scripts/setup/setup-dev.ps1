@@ -85,14 +85,16 @@ try {
     Write-Host "[Dependencies] Installing dependencies... "
 
     Write-Host "[Dependencies] Setting cuBLAS, cmake environment variables..."
-    $env:CMAKE_ARGS="-DGGML_CUDA=ON -DLLAMA_CURL=OFF -DCMAKE_BUILD_TYPE=Release"
+    $env:CMAKE_ARGS="-DGGML_CUDA=ON -DLLAMA_CURL=OFF -DCMAKE_BUILD_TYPE=Release" # the -DGGML_CUDA flag enables CUDA support
     $env:FORCE_CMAKE=1
 
     $cudaVersion = (nvcc --version 2>$null) -match 'release \d+\.\d+' -replace '.*release (\d+\.\d+).*', '$1'
     if ([string]::IsNullOrEmpty($cudaVersion)) {
         Write-Warning "[Dependencies] CUDA not detected. LLM will run in CPU-only mode (much slower)."
+        $env:CMAKE_ARGS="-DGGML_CUDA=OFF -DLLAMA_CURL=OFF -DCMAKE_BUILD_TYPE=Release"
     } elseif ($cudaVersion -lt "11.6") {
         Write-Warning "[Dependencies] CUDA version $cudaVersion may be too old. Recommended: 11.8+"
+        # we'll allow it to install with CUDA Support
     }
 
     try {

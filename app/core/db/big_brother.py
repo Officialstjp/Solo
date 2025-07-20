@@ -606,7 +606,7 @@ class BigBrother:
 
                     return True, user_creds['user_id'], "Authentication successful."
 
-                except VerifMismatchError:
+                except VerifyMismatchError:
                     # record failed login attempt
                     await self.rate_limiter.record_login_attempt(LoginAttempt(
                         user_id=user_creds['user_id'],

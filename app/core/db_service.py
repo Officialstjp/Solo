@@ -37,7 +37,7 @@ class DatabaseService:
         self.users = UsersDatabase()
         self.rag = RAGDatabase()
         self.cache = CacheDatabase()
-        self.big_brother = BigBrother()
+        self.bigBrother = BigBrother()
 
         self.logger.info("Database service initialized")
 
@@ -52,7 +52,7 @@ class DatabaseService:
             await self.users.initialize()
             await self.rag.initialize()
             await self.cache.initialize()
-            await self.big_brother.initialize()
+            await self.bigBrother.initialize()
 
             self.logger.info("Database connection pool initialized")
             return True

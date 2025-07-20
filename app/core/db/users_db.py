@@ -257,6 +257,40 @@ class UsersDatabase:
             self.logger.error(f"Failed to get user: {str(e)}")
             return None
 
+    async def get_user_by_username(self, username: str) -> Optional[User]:
+        """
+        Get a user by username
+
+        Args:
+            username: the username string to fetch from the DB
+
+        Returns:
+            User model if successful, None if otherwise
+        """
+        try:
+            pool = await get_connection_pool()
+            async with pool.acquire() as conn:
+                userSQL = """
+                    SELECT user_id, username, email, full_name, created_at, last_active, preferences
+                    FROM users.users
+                    WHERE username = $1
+                """
+                result = await conn.fetchrow(userSQL, username)
+                if result:
+                    return User(
+                        user_id=result['user_id'],
+                        username=result['username'],
+                        email=result['email'],
+                        full_name=result['full_name'],
+                        created_at=result['created_at'],
+                        last_active=result['last_active'],
+                        preferences=result['preferences']
+                    )
+                return None
+        except Exception as e:
+            self.logger.error(f"Failed to get user by username: {str(e)}")
+            return None
+
     async def update_user(self, user_id: str, updates: Dict[str, Any]) -> bool:
         """
         Update a user
@@ -360,40 +394,6 @@ class UsersDatabase:
         except Exception as e:
             self.logger.error(f"Failed to list users: {str(e)}")
             return False
-
-    async def authenticate_user(self, username: str, password: str, ip_address: str, user_agent: str,
-                           totp_code: Optional[str] = None) -> Tuple[bool, Optional[User], str]:
-        """
-        Authenticate a user using credentials
-
-        Args:
-            username: Username
-            password: Password
-            ip_address: Client IP address
-            user_agent: Client user agent
-            totp_code: Time-based one-time password (if MFA enabled)
-
-        Returns:
-            Tuple[bool, Optional[User], str]: (success, user object if successful, message)
-        """
-        try:
-            # Use BigBrother for authentication
-            from app.core.db.big_brother import BigBrother
-
-            success, user_id, message = await BigBrother.authenticate(
-                username, password, ip_address, user_agent, totp_code
-            )
-
-            if success and user_id:
-                # Get the full user object
-                user = await self.get_user(user_id)
-                return True, user, message
-
-            return False, None, message
-
-        except Exception as e:
-            self.logger.error(f"Failed to authenticate user: {str(e)}")
-            return False, None, f"Authentication error: {str(e)}"
 
     async def change_user_password(self, user_id: str, current_password: str, new_password: str,
                              ip_address: str, user_agent: str) -> Tuple[bool, str]:
@@ -975,6 +975,26 @@ class UsersDatabase:
             self.logger.error(f"Failed to get conversation with messages: {str(e)}")
             return None
 
+    async def get_conversation_message_count(self, conversation_id: str) -> int:
+        """ Get the number of messages in a conversation """
+        try:
+            pool = await get_connection_pool()
+            async with pool.acquire() as conn:
+                # Prepare SQL count statement
+                messageCountSQL = """
+                    SELECT COUNT(*) AS count
+                    FROM users.messages
+                    WHERE conversation_id = $1
+                """
+                # execute count query
+                result = await conn.fetchrow(messageCountSQL, conversation_id)
+                if result:
+                    return result['count']
+                return 0
+        except Exception as e:
+            self.logger.error(f"Failed to get conversation message count: {str(e)}")
+            return 0
+
     async def search_messages(self, query: str, limit: int = 100, offset: int = 0) -> List[Message]:
         """ Serach for messages containing a query string """
         try:
@@ -1013,8 +1033,7 @@ class UsersDatabase:
         try:
             from app.core.db.big_brother import BigBrother
 
-            security = BigBrother()
-            success, message = await security.lock_account(
+            success, message = await BigBrother.lock_account(
                 user_id=user_id,
                 duration_minutes=duration_minutes,
                 reason=reason
@@ -1039,8 +1058,7 @@ class UsersDatabase:
         try:
             from app.core.db.big_brother import BigBrother
 
-            security = BigBrother()
-            success, message = await security.unlock_account(
+            success, message = await BigBrother.unlock_account(
                 user_id=user_id,
                 admin_id=admin_id
             )

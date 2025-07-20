@@ -5,9 +5,10 @@ Due to circle import issues, a seperate factory with dependencies file was chose
 """
 
 from fastapi import FastAPI, Request
-from fastapi.middleware.cores import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import time
+import asyncio
 from typing import Dict, Optional
 import os
 
@@ -18,12 +19,16 @@ from app.core.model_manager import ModelManager
 from app.core.model_service import ModelService
 from app.core.prompt_templates import PromptLibrary
 from app.core.db_service import DatabaseService
+from app.api.middleware import auth_middleware
 
 logger = get_logger(name="API_Factory", json_format=False)
 
 def create_app(db_service=None) -> FastAPI:
     """
     Create and configure a FastAPI application instance
+
+    Args:
+        db_service (DatabaseService): Database service instance
 
     Returns:
         FastAPI: Configured application instance
@@ -32,8 +37,11 @@ def create_app(db_service=None) -> FastAPI:
 
     app = FastAPI(
         title="Solo API",
-        description="API for Solo AI Assistnatn",
-        version="0.1.0"
+        description="API for Solo AI Assistant",
+        version="0.1.0",
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json"
     )
 
     # CORS middleware to allow requests from the dashboard
@@ -44,6 +52,8 @@ def create_app(db_service=None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    if db_service:
+        app.middleware("http")(auth_middleware(db_service=db_service))
 
     event_bus = EventBus()
     model_manager = ModelManager(
@@ -64,7 +74,6 @@ def create_app(db_service=None) -> FastAPI:
     )
 
     # Store application state
-    app = FastAPI()
     app.state.config = config
     app.state.config = config
     app.state.event_bus = event_bus
@@ -97,6 +106,14 @@ def create_app(db_service=None) -> FastAPI:
             app.state.model_service.initialize()
         )
 
+        # Test database connection if available
+        if app.state.db_service:
+            db_connected = await app.state.db_service.test_connection()
+            if db_connected:
+                logger.info("Database connection established")
+            else:
+                logger.warning("Database connection failed, some features may be unavailable")
+
         logger.info("API server initialized successfully")
 
     @app.on_event("shutdown")
@@ -122,6 +139,13 @@ def create_app(db_service=None) -> FastAPI:
         loaded_models = list(model_service.models.keys()) if model_service else []
         loading_models = list(model_service.loading_models) if model_service else []
 
+        db_status = False
+        if app.state.db_service:
+            try:
+                db_status = app.state.db_service.test_connection()
+            except Exception as e:
+                db_status = False
+
         return {
             "status": "online",
             "uptime": uptime,
@@ -130,12 +154,14 @@ def create_app(db_service=None) -> FastAPI:
                 "event_bus": app.state.event_bus is not None,
                 "model_manager": app.state.model_manager is not None,
                 "model_service": app.state.model_service is not None,
-                "prompt_library": app.state.prompt_library is not None
+                "prompt_library": app.state.prompt_library is not None,
+                "db_service": db_status
             },
             "models": {
                 "loaded": loaded_models,
                 "loading": loading_models,
-                "default": model_service.default_model_id if model_service else None
+                "default": model_service.default_model_id if model_service else None,
+                "db_service": db_status
             }
         }
 
@@ -151,10 +177,14 @@ def create_app(db_service=None) -> FastAPI:
     from app.api.routes.llm_endpoint import create_router as create_llm_router
     from app.api.routes.config_endpoint import create_router as create_config_router
     from app.api.routes.metrics_endpoint import create_router as create_metrics_router
+    from app.api.routes.users_endpoint import create_router as create_users_router
+    from app.api.routes.conversations_endpoint import create_router as create_conversations_router
 
     app.include_router(create_models_router(app))
     app.include_router(create_llm_router(app))
     app.include_router(create_config_router(app))
     app.include_router(create_metrics_router(app))
+    app.include_router(create_conversations_router(app))
+    app.include_router(create_users_router(app))
 
     return app

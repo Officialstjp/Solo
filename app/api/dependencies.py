@@ -1,6 +1,10 @@
 """
-Moduele Name: app/api/dependencies.py
-Purpose     : Dependecy injection functions for FastAPI routes
+Module Name : app/api/dependencies.py
+Purpose     : Dependency injection functions for FastAPI routes
+              created to avoid circular imports and manage dependencies cleanly.
+History     :
+    Date            Notes
+    20.07.2025      Add history
 """
 from fastapi import Depends, Request
 from app.utils.events import EventBus

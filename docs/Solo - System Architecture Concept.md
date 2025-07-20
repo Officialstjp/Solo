@@ -221,3 +221,11 @@ Note: We've completed the development of specialized database services including
   5. Cache management for model information to avoid redundant file operations
 
 For detailed instructions on using the LLM features, refer to [USING_LLM_FEATURES.md](USING_LLM_FEATURES.md).
+
+## 6. Known Issues and open topics (dev)
+- Add support for remembering logins
+
+Total time spent on this project (inlucding doc-work):
+ -  **124h**
+
+last updated 20.07.25 8:30, daily time at time of note: 0:00
