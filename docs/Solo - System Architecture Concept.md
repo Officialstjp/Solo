@@ -15,42 +15,69 @@ Solo follows a modular, event-driven architecture designed to be scalable, maint
 
 ```
 Solo/
-├─ app/                    # runtime code
-│  ├─ api/                 # API layer
-│  │   ├─ server.py        # Main file orchestrating API Init
-│  │   ├─ factory.py       # Factory for FastAPI Apps
-│  │   ├─ dependencies.py  # Dependency injection for the API
-│  │   ├─ middleware/      # Authentication middleware
-│  │   └─ routes/          # API endpoint implementations
-│  ├─ core/                # Core components
-│  │   ├─ agent_bus.py     # CrewAI/Autogen orchestration helpers
-│  │   ├─ llm_runner.py    # llama.cpp / Ollama wrapper + caching
-│  │   ├─ llm_tester.py    # CLI Testing utility for llms
-│  │   ├─ memory.py        # Chroma vector-DB helper
-│  │   ├─ model_cache.py   # caching mechanism for llm responses
-│  │   ├─ model_info.py    # CLI utility to display model information
-│  │   ├─ model_manager.py # Manages LLM model selection, validation
-│  │   ├─ prompt_templates.py # prompt templates for different model formats
-│  │   ├─ stt.py           # faster-whisper pipeline
-│  │   ├─ tts.py           # piper voice synth
-│  │   └─ wake_word.py     # Porcupine hot-key / wake-word
-│  ├─ ui/                  # User interface
-│  │   └─ dashboard_app.py # Streamlit monitoring panel
-│  ├─ utils/               # Shared utilities
-│  │   ├─ logger.py        # struct-log setup
-│  │   └─ events.py        # pydantic event schema, asyncio.Queue
-│  ├─ main.py              # CENTRAL MANAGER (launch & supervise coroutines)
-│  ├─ config.py            # pydantic-based settings loader (.env / CLI flags)
-├─ scripts/                # Automation scripts
-│  ├─ setup_dev.ps1        # create venv, install deps, pre-commit
-│  ├─ cleanup_dev.ps1      # uninstall & cleanup dependencies, env-vars...
-│  ├─ run_agent.ps1        # one-liner to start everything
-│  ├─ quantize.bat         # helper for gguf model conversion
-│  ├─ db/                  # database management scripts
-├─ tests/                  # Testing infrastructure
-├─ docs/                   # Documentation
-├─ cache/                  # Cache storage
-├─ backups/                # Database backups
+├─ app/                             # == runtime code
+│  ├─ api/                          # === API layer
+│  │   ├─ server.py                 # ---- Main file orchestrating API Init
+│  │   ├─ factory.py                # ---- Factory for FastAPI Apps
+│  │   ├─ dependencies.py           # ---- Dependency injection for the API
+│  │   ├─ middleware/               # ---- Authentication middleware
+│  │   └─ routes/                   # ---- API endpoint implementations
+│  │
+│  ├─ core/                         # === Core components
+│  │   ├─ agent_bus.py              # ---- CrewAI/Autogen orchestration helpers
+│  │   ├─ llm_runner.py             # ---- llama.cpp / Ollama wrapper + caching
+│  │   ├─ llm_tester.py             # ---- CLI Testing utility for llms
+│  │   ├─ memory.py                 # ---- Chroma vector-DB helper
+│  │   ├─ model_cache.py            # ---- caching mechanism for llm responses
+│  │   ├─ model_info.py             # ---- CLI utility to display model information
+│  │   ├─ model_manager.py          # ---- Manages LLM model selection, validation
+│  │   ├─ prompt_templates.py       # ---- prompt templates for different model formats
+│  │   ├─ stt.py                    # ---- faster-whisper pipeline
+│  │   ├─ tts.py                    # ---- piper voice synth
+│  │   ├─ wake_word.py              # ---- Porcupine hot-key / wake-word
+│  │
+│  │   ├─ db/                       # ==== db_service components
+│  │   │  ├─ big_brother.py         # ----- db security manager
+│  │   │  ├─ cache_db.py            # ----- python wrapper for cache-db operations
+│  │   │  ├─ connection.py          # ----- connection pool for db connections
+│  │   │  ├─ metrics_db.py          # ----- python wrapper for metrics-db operations
+│  │   │  ├─ models_db.py           # ----- python wrapper for models-db operations
+│  │   │  ├─ rag_db.py              # ----- python wrapper for rag-db operations
+│  │   │  ├─ users_db.py            # ----- python wrapper for rag-db operations
+│  │
+│  ├─ ui/                           # === User interface
+│  │   └─ dashboard_app.py          # ---- Streamlit monitoring panel
+│  │
+│  ├─ utils/                        # === Shared utilities
+│  │   ├─ logger.py                 # ---- struct-log setup
+│  │   └─ events.py                 # ---- pydantic event schema, asyncio.Queue
+│  │
+│  ├─ main.py                       # --- CENTRAL MANAGER (launch & supervise coroutines)
+│  ├─ config.py                     # --- pydantic-based settings loader (.env / CLI flags)
+│  │
+├─ scripts/                         # == Automation scripts
+│  ├─ setup_dev.ps1                 # --- create venv, install deps, pre-commit
+│  ├─ cleanup_dev.ps1               # --- uninstall & cleanup dependencies, env-vars...
+│  ├─ run_agent.ps1                 # --- one-liner to start everything
+│  ├─ quantize.bat                  # --- helper for gguf model conversion
+│  │
+│  ├─ db/                           # === database management scripts
+│  │  ├─ backup-db.ps1              # ---- database backup
+│  │  ├─ restore-db.ps1             # ---- restore database from a backup
+│  │  ├─ run_DBContainer-db.ps1     # ---- run the DB docker instance
+│  │  ├─ schedule-backups.ps1.ps1   # ---- schedule backups
+│  │
+│  ├─ DockerInit/                   # === database management scripts
+│  │  ├─ 00-init-db.sh              # ---- docker initialization script
+│  │
+│  ├─ model/                        # === model utiltiy script
+│  │  ├─ downl_model.ps1            # ---- download a model from a url
+│  │  ├─ quantatize.bat             # ---- quantatize a model
+│  │
+├─ tests/                           # == Testing infrastructure
+├─ docs/                            # == ocumentation
+├─ cache/                           # == Cache storage
+├─ backups/                         # == Database backups
 ```
 
 ### 1.2 Architectural Rationale
