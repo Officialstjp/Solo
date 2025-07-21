@@ -31,23 +31,23 @@ class AuthMiddleware:
             exclude_paths (List[str], optional): List of paths to exclude from auth
             exclude_methods (List[str], optional): List of HTTP methods to exclude from auth
         """
-
+        # only allow the root currently, testing purposes
         self.db_service = db_service
         self.exclude_paths = exclude_paths or [
             "/",
-            "/status",
-            "/docs",
-            "/openapi.json",
-            "/redoc",
-            "/auth/login",
-            "/auth/register",
-            "/auth/forgot-password",
-            "/auth/reset-password",
+            #"/status",
+            #"/docs",
+            #"/openapi.json",
+            #"/redoc",
+            #"/auth/login",
+            #"/auth/register",
+            #"/auth/forgot-password",
+            #"/auth/reset-password",
         ]
         self.exclude_prefixes = exclude_prefixes or [
-            "/static/",
-            "/metrics/", # Exclude metrics endpoint - can be secured separately
-            "/auth/"     # Allow all authentication-related endpoints
+            #"/static/",
+            #"/metrics/", # Exclude metrics endpoint - can be secured separately
+            #"/auth/"     # Allow all authentication-related endpoints
         ]
         logger.info("Auth middleware initialized")
 

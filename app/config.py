@@ -81,7 +81,7 @@ class AppConfig(BaseModel):
 
     # API configuration
     api_host: str = Field(default="0.0.0.0")
-    api_port: int = Field(default=8080)
+    api_port: int = Field(default=8069)
 
     # Dashboard configuration
     dashboard_host: str = Field(default="0.0.0.0")

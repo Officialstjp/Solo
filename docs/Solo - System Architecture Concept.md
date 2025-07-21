@@ -284,3 +284,8 @@ Planned architectural extensions include:
 - **Federated Learning**: Collaborative model improvement across instances
 - **Multi-Modal Support**: Integration with image and audio understanding
 - **Plugin System**: Extensibility through standardized plugins
+
+Total time spent on this project (inlucding doc-work):
+ -  **136h**
+
+last updated 20.07.25 22:30, daily time at time of note: 11:00
