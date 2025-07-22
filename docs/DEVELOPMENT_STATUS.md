@@ -8,8 +8,8 @@ This document provides a comprehensive overview of the current implementation st
 |------|-----------|
 | June 2025 | Project initiated - Core architecture defined |
 | Early July 2025 | LLM integration and model management completed |
-| Mid July 2025 | API layer and database services implemented |
-| Late July 2025 | User management and authentication completed |
+| Mid July 2025 | Basic API layer and database services implemented |
+| Late July 2025 | Basic User management and authentication completed |
 | Planned Late July 2025 | Basic Dashboard UI and visualization tools |
 | Planned August 2025 | Memory/RAG integration |
 | Planned August 2025 | Voice capabilities (STT/TTS) |
@@ -28,8 +28,8 @@ This document provides a comprehensive overview of the current implementation st
 | Model Manager | ✅ Complete | Dynamic model detection and selection |
 | Prompt Templates | ✅ Complete | Model-specific prompt formatting |
 | Response Cache | ✅ Complete | Performance optimization with caching |
-| Database Service | ✅ Complete | PostgreSQL integration with specialized services |
-| API Layer | ✅ Complete | FastAPI server with comprehensive endpoints |
+| Database Service | 🔄 Partially Complete | PostgreSQL integration with specialized services |
+| API Layer | 🔄 Partially Complete | FastAPI server with comprehensive endpoints |
 | User Management | ✅ Complete | Authentication, authorization, and session tracking |
 | Memory / RAG | ⏳ In Progress | Vector database integration with pgvector |
 | STT | 🔜 Planned | Real-time transcription using faster-whisper |
