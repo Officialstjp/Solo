@@ -23,7 +23,6 @@ pydantic = "^2.7"
 email-validator = "^2.1.0"                              # Required for pydantic's EmailStr
 aioconsole = "^0.8.1"
 asyncpg = "^0.29.0"
-psycopg = "^2.9.0"
 argon2-cffi = "^23.1.0"                                 # For password hashing
 pyotp = "^2.9.0"                                        # MFA
 
@@ -33,6 +32,13 @@ pytest = "^8.2"
 pre-commit = "^3.7"
 pytest-asyncio = "^0.24"
 python-dotenv = "^1.1.0"
+pytest-cov = "^4.1"
+pytest-httpserver = "^1.0"
+pytest-benchmark = "^4.0"
+testcontainers = "^3.7"
+psutil = "^5.9"
+locust = "^2.24"
+bandit = "^1.7"
 
 [build-system]
 requires = ["poetry-core"]

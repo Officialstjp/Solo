@@ -17,17 +17,17 @@ function Write-Header {
 
 function Write-Success {
     param([string]$text)
-    Write-Host "✅ $text" -ForegroundColor Green
+    Write-Host "$text" -ForegroundColor Green
 }
 
 function Write-Error {
     param([string]$text)
-    Write-Host "❌ $text" -ForegroundColor Red
+    Write-Host "$text" -ForegroundColor Red
 }
 
 function Write-Info {
     param([string]$text)
-    Write-Host "ℹ️ $text" -ForegroundColor Yellow
+    Write-Host "$text" -ForegroundColor Yellow
 }
 
 # Check if API is running

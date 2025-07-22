@@ -1,0 +1,34 @@
+[bandit]
+# Number of lines of context to display for each finding
+context-lines = 3
+
+# Files and directories to skip (comma-separated, accepts wildcards)
+exclude = /tests/,/venv/,/.venv/,.git,__pycache__
+
+# Directories to include (comma-separated, accepts wildcards)
+include = app/,scripts/
+
+# Severity level filter (low, medium, high)
+# Use ll to report on all security issues regardless of severity level
+severity = ll
+
+# Test IDs to include (comma-separated)
+# tests =
+
+# Output format (csv, json, yaml, html, txt)
+format = txt
+
+# How many bandit runs to compare when using baseline functionality
+number = 3
+
+# Location of .bandit file (default location is in the current working directory)
+# ini_path = /etc/bandit/bandit.ini
+
+# Don't show progress bar
+# quiet = True
+
+# Run a single test or a list of test IDs
+# tests = B101,B102
+
+# Ignore certain test IDs
+# skips = B101,B102
