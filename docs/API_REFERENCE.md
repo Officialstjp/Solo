@@ -7,7 +7,7 @@ The Solo API provides programmatic access to the Solo AI Assistant's functionali
 ## Base URL
 
 All API paths are relative to the base URL:
-dev: `http://localhost:8080/`
+dev: `http://localhost:8069/`
 prod: '🤷‍♂️'
 
 ## Authentication
@@ -26,7 +26,7 @@ Public endpoints that don't require authentication:
 - `/auth/register`
 - `/auth/forgot-password`
 - `/auth/reset-password`
-- `/metrics/*` (metrics endpoints are publicly accessible)
+- `/metrics/*` (metrics endpoints might be publicly accessible later)
 
 ## Endpoints
 
