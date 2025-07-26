@@ -39,7 +39,7 @@ This document provides a comprehensive overview of the current implementation st
 
 ### Detailed Implementation Status
 
-#### ✅ Completed Features
+#### Completed Features
 
 1. **Event Bus Architecture**
    - Pydantic event models for type-safe communication
@@ -102,7 +102,7 @@ This document provides a comprehensive overview of the current implementation st
     - Database testing with transactions
     - Mocking framework for external dependencies
 
-#### ⏳ Features In Progress
+#### Features In Progress
 
 1. **Memory and RAG Integration**
    - pgvector extension for PostgreSQL vector storage
@@ -111,7 +111,7 @@ This document provides a comprehensive overview of the current implementation st
    - Document chunking and processing pipeline
    - Context injection for enhanced responses
 
-#### 🔜 Planned Features
+#### Planned Features
 
 1. **Speech Components**
    - STT using faster-whisper for real-time transcription
