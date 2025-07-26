@@ -14,10 +14,10 @@ import sys
 import os
 from pathlib import Path
 
-from core.llm_runner import LlamaModel
-from core.model_manager import ModelManager
-from core.prompt_templates import PromptLibrary
-from utils.logger import get_logger
+from app.core.llm_runner import LlamaModel
+from app.core.model_manager import ModelManager
+from app.core.prompt_templates import PromptLibrary
+from app.utils.logger import get_logger
 
 async def main():
     """Simple CLI demo for testing the LLM directly"""

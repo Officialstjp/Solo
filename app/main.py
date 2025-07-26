@@ -15,17 +15,16 @@ import sys
 from typing import Dict, List, Callable, Coroutine, Any
 import os
 from pathlib import Path
-
-from core.llm_runner import llm_runner_component
-from core.llm_tester import llm_tester_component
-from core.model_manager import ModelManager
-from core.prompt_templates import PromptLibrary
-from core.db_service import DatabaseService
-from utils.logger import get_logger
-from utils.events import EventBus, EventType
 import uvicorn
-from config import AppConfig
 
+from app.core.llm_runner import llm_runner_component
+from app.core.llm_tester import llm_tester_component
+from app.core.model_manager import ModelManager
+from app.core.prompt_templates import PromptLibrary
+from app.core.db_service import DatabaseService
+from app.utils.logger import get_logger
+from app.utils.events import EventBus, EventType
+from app.config import AppConfig
 
 class SoloApp:
     """ Main application for Solo """
@@ -283,7 +282,7 @@ async def main():
     )
 
     # Create and register the model service
-    from core.model_service import ModelService
+    from app.core.model_service import ModelService
 
     model_service = ModelService(
         event_bus=app.event_bus,

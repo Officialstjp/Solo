@@ -9,10 +9,10 @@ import os
 from typing import Dict, Any, Optional, List, Set
 import uuid
 
-from utils.logger import get_logger
-from utils.events import EventBus, EventType, ModelLoadRequestEvent, ModelLoadedEvent, ModelUnloadedEvent
-from core.model_manager import ModelManager
-from core.llm_runner import LlamaModel
+from app.utils.logger import get_logger
+from app.utils.events import EventBus, EventType, ModelLoadRequestEvent, ModelLoadedEvent, ModelUnloadedEvent
+from app.core.model_manager import ModelManager
+from app.core.llm_runner import LlamaModel
 
 class ModelService:
     """

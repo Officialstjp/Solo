@@ -28,8 +28,8 @@ from pydantic import BaseModel, Field, EmailStr, validator
 import ipaddress
 import pyotp
 
-from core.db.connection import get_connection_pool
-from utils.logger import get_logger
+from app.core.db.connection import get_connection_pool
+from app.utils.logger import get_logger
 
 # ======= Pydantic models =======
 

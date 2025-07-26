@@ -18,11 +18,11 @@ from pathlib import Path
 import uuid
 
 from llama_cpp import Llama
-from utils.logger import get_logger
-from utils.events import EventBus, EventType, LLMRequestEvent, LLMResponseEvent, SessionClearEvent
-from core.model_manager import ModelManager, ModelInfo, ModelFormat
-from core.prompt_templates import PromptLibrary, PromptTemplate
-from core.model_cache import ResponseCache
+from app.utils.logger import get_logger
+from app.utils.events import EventBus, EventType, LLMRequestEvent, LLMResponseEvent, SessionClearEvent
+from app.core.model_manager import ModelManager, ModelInfo, ModelFormat
+from app.core.prompt_templates import PromptLibrary, PromptTemplate
+from app.core.model_cache import ResponseCache
 
 class LlamaModel:
     """ Wrapper for llama.cpp model inference """
@@ -215,7 +215,7 @@ class LlamaModel:
 class LLMRunner:
     """ Main LLM runner component that interfaces with the event bus """
 
-    from core.model_service import ModelService
+    from app.core.model_service import ModelService
     def __init__(
         self,
         event_bus: EventBus,

@@ -2,9 +2,11 @@ from typing import Dict, List, Optional, Any
 import json
 import asyncpg
 from datetime import datetime, timedelta
-from utils.logger import get_logger
-from core.db.connection import get_connection_pool
 from pydantic import BaseModel, Field
+
+from app.utils.logger import get_logger
+from app.core.db.connection import get_connection_pool
+
 
 class SystemMetrics(BaseModel):
     """ Pydantic model for system metrics data """

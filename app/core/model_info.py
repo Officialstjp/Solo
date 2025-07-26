@@ -14,8 +14,8 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from core.model_manager import ModelManager, ModelInfo, ModelFormat
-from utils.logger import get_logger
+from app.core.model_manager import ModelManager, ModelInfo, ModelFormat
+from app.utils.logger import get_logger
 
 def print_model_info(model_info: ModelInfo, verbose: bool = False):
     """Print information about a model

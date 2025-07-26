@@ -9,14 +9,14 @@ from contextlib import asynccontextmanager
 import asyncio
 import functools
 
-from core.db.connection import get_connection_pool, get_sync_connection
-from core.db.metrics_db import MetricsDatabase
-from core.db.models_db import ModelsDatabase
-from core.db.users_db import UsersDatabase
-#from core.db.rag_db import RAGDatabase
-#from core.db.cache_db import CacheDatabase
-from core.db.big_brother import BigBrother
-from utils.logger import get_logger
+from app.core.db.connection import get_connection_pool, get_sync_connection
+from app.core.db.metrics_db import MetricsDatabase
+from app.core.db.models_db import ModelsDatabase
+from app.core.db.users_db import UsersDatabase
+#from app.core.db.rag_db import RAGDatabase
+#from app.core.db.cache_db import CacheDatabase
+from app.core.db.big_brother import BigBrother
+from app.utils.logger import get_logger
 
 class DatabaseService:
     """

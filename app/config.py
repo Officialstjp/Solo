@@ -10,7 +10,7 @@ History   :
 """
 
 from pydantic import BaseModel, Field, validator
-from utils.logger import get_logger
+from app.utils.logger import get_logger
 from typing import Optional, Dict, List, Any
 import os
 import json
@@ -35,6 +35,8 @@ class LLMConfig(BaseModel):
     n_gpu_layers: int = Field(default=35)
     cache_enabled: bool = Field(default=True)
     model_params: Dict[str, Any] = Field(default_factory=dict)
+
+
 
     @validator('model_path')
     def validate_model_path(cls, v):
@@ -92,7 +94,7 @@ class AppConfig(BaseModel):
     memory_db_path: Optional[str] = None
 
     # Models directory
-    models_dir: str = Field(default="D:\data\models")
+    models_dir: str = Field(default="D:/data/models")
 
     def __init__(self, config_path: str = None, **data):
         """ Initialize configuration from environment variables or .env file """
@@ -104,6 +106,8 @@ class AppConfig(BaseModel):
 
         # Override with env variables
         env_vars = {
+            "app_name": os.getenv("SOLO_APP_NAME"),
+            "app_version": os.getenv("SOLO_APP_VERSION"),
             "log_level": os.getenv("SOLO_LOG_LEVEL"),
             "json_logs": os.getenv("SOLO_JSON_LOGS"),
             "log_file": os.getenv("SOLO_LOG_FILE"),

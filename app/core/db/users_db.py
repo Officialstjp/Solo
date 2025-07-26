@@ -16,8 +16,8 @@ import re
 from datetime import datetime, timedelta
 from pydantic import BaseModel, Field, EmailStr, validator
 
-from core.db.connection import get_connection_pool
-from utils.logger import get_logger
+from app.core.db.connection import get_connection_pool
+from app.utils.logger import get_logger
 
 # ======= Pydantic models ========
 

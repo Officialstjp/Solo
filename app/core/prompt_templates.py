@@ -12,7 +12,7 @@ import json
 import os
 from pathlib import Path
 
-from core.model_manager import ModelFormat
+from app.core.model_manager import ModelFormat
 
 class PromptTemplate:
     """A template for formatting prompts for different model types"""

@@ -2,6 +2,8 @@
 # secrets
 .env
 
+logs/
+
 # anything under \backups
 backups/*
 
@@ -11,7 +13,6 @@ scripts/.python-version
 
 # in case
 temp/
-rhasspy_piper_ A fast, local neural text to speech system.pdf
 
 tests/scratchpad.py
 tests/scratchpad copy.py

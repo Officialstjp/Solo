@@ -13,8 +13,8 @@ from datetime import datetime
 import aioconsole
 import os
 
-from utils.logger import get_logger
-from utils.events import EventBus, EventType, LLMRequestEvent, LLMResponseEvent
+from app.utils.logger import get_logger
+from app.utils.events import EventBus, EventType, LLMRequestEvent, LLMResponseEvent
 
 DEFAULT_SYSTEM_PROMPT = """You are an advanced research assistant, named Solo. Your task is to support, advise and teach the user in any task they come across.
 Always speak in a natural tone, act like an absolute professional in the task at hand and speak as such.
