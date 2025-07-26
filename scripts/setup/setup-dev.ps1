@@ -16,8 +16,6 @@ Usage:  .\scripts\dev.ps1
 Change Log:
 -
 
-TODO:
-add psycopg to this setup, doesnt work in poetry
 #>
 Write-Host "================= Environment Setup =================" -ForegroundColor Green
 # --- 1. Ensure a valid python version is installed (3.11)---
