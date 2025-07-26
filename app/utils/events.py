@@ -64,9 +64,8 @@ class StatusUpdateEvent(BaseEvent):
     """ Status update from any component """
     event_type: EventType = EventType.STATUS
     component: str
-    status: Dict[str, Any] = {}
+    status: Dict[str, Any] = Field(default_factory=dict)
 
-@dataclass
 class LLMRequestEvent(BaseEvent):
     """ Request to LLM """
     event_type: EventType = EventType.LLM_REQUEST
@@ -82,7 +81,6 @@ class LLMRequestEvent(BaseEvent):
         if self.session_id is None:
             self.session_id = str(uuid.uuid4())
 
-@dataclass
 class LLMResponseEvent(BaseEvent):
     """ Response from LLM """
     event_type: EventType = EventType.LLM_RESPONSE
@@ -101,7 +99,7 @@ class ModelLoadRequestEvent(BaseEvent):
 
 @dataclass
 class ModelLoadedEvent(BaseEvent):
-    event_tpye: EventType = EventType.MODEL_LOADED
+    event_type: EventType = EventType.MODEL_LOADED
     model_id: str
     success: bool
     error_message: Optional[str] = None

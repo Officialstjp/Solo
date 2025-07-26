@@ -242,6 +242,7 @@ class LLMRunner:
         self.prompt_library = prompt_library or PromptLibrary()
         self.cache_dir = cache_dir
         self.cache_enabled = cache_enabled
+        self._tasks: List[asyncio.Task] = [] # keep track of background tasks
 
         # Create a session map to track ongoing conversations
         self.sessions: Dict[str, List[Dict[str, str]]] = {}
@@ -256,26 +257,31 @@ class LLMRunner:
     async def initialize(self):
         """ Initialize the LLM model """
         self.logger.info("Intitializing LLM runner...")
-
         await self.model_service.initialize()
-
-        self.logger.info("LLM runner initialized")
+        self.logger.info("LLM runner initialized successfully")
 
     async def run(self):
         """ Main run loop for the LLM component """
         await self.initialize()
 
-        self.logger.info("Starting LLM runner loop")
-
-        # Create tasks for different event types
-        llm_request_task = asyncio.create_task(self._handle_llm_requests())
+        # create and track background tasks
+        request_handler_task = asyncio.create_task(self._handle_llm_requests())
         session_clear_task = asyncio.create_task(self._handle_session_clears())
+        self._tasks.extend([request_handler_task, session_clear_task])
 
-        # Wait for all tasks to complete (they shouldn't unless there's an error)
-        await asyncio.gather(
-            llm_request_task,
-            session_clear_task
-        )
+        # wait for tasks to complete (they should run indefinitely)
+        await asyncio.gather(*self._tasks)
+
+    async def shutdown(self):
+        """ Shutdown the LLM runner component """
+        self.logger.info("Shutting down LLM runner...")
+        for task in self._tasks:
+            if not task.done():
+                task.cancel()
+
+        # Wait for all tasks to finish
+        await asyncio.gather(*self._tasks, return_exceptions=True)
+        self.logger.info("LLM runner shutdown complete")
 
     async def _handle_llm_requests(self):
         """ Handle LLM request events """
@@ -414,6 +420,8 @@ async def llm_runner_component(
         cache_enabled=cache_enabled,
         cache_dir=cache_dir
     )
-
-    # Run the runner
-    await runner.run()
+    try:
+        # Run the runner
+        await runner.run()
+    finally:
+        await runner.shutdown()
