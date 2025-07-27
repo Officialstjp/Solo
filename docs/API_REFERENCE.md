@@ -95,7 +95,6 @@ Initiates a password reset process.
 **Response:**
 ```json
 {
-  "status": "string",
   "message": "string"
 }
 ```
@@ -115,14 +114,13 @@ Completes a password reset process.
 **Response:**
 ```json
 {
-  "status": "string",
   "message": "string"
 }
 ```
 
 ### User Management API
 
-#### `GET /users/profile`
+#### `GET /users/me`
 
 Retrieves the current user's profile information.
 
@@ -137,7 +135,7 @@ Retrieves the current user's profile information.
 }
 ```
 
-#### `PUT /users/profile`
+#### `PUT /users/me`
 
 Updates the current user's profile information.
 
@@ -172,22 +170,16 @@ Retrieves the current user's preferences.
 }
 ```
 
-#### `PUT /users/preferences`
+#### `DELETE /users/me`
 
-Updates the current user's preferences.
-
-**Request Body:**
-```json
-{
-  "theme": "string" (optional),
-  "language": "string" (optional),
-  "notifications_enabled": boolean (optional),
-  "custom_settings": object (optional)
-}
-```
+Deletes the current user's account.
 
 **Response:**
-Updated preferences object.
+```json
+{
+  "message": "string"
+}
+```
 
 ### LLM API
 
@@ -247,14 +239,13 @@ Same as `/llm/generate`
 **Response:**
 SSE stream of response chunks.
 
-#### `POST /llm/load-model`
+#### `POST /models/{model_id}/load`
 
 Explicitly loads a model for use.
 
 **Request Body:**
 ```json
 {
-  "model_id": "string",
   "priority": boolean (default: false)
 }
 ```
@@ -268,7 +259,7 @@ Explicitly loads a model for use.
 }
 ```
 
-#### `GET /llm/status/{model_id}`
+#### `GET /models/{model_id}/status`
 
 Checks the loading status of a model.
 
@@ -283,21 +274,13 @@ Checks the loading status of a model.
 }
 ```
 
-#### `POST /llm/clear-session`
+#### `POST /sessions/{session_id}/clear`
 
 Clears the conversation history for a session.
-
-**Request Body:**
-```json
-{
-  "session_id": "string"
-}
-```
 
 **Response:**
 ```json
 {
-  "status": "string",
   "message": "string"
 }
 ```
@@ -442,7 +425,6 @@ Deletes a conversation.
 **Response:**
 ```json
 {
-  "status": "string",
   "message": "string"
 }
 ```
@@ -463,102 +445,6 @@ Adds a message to a conversation.
 
 **Response:**
 Created message object.
-
-### Configuration API
-
-#### `GET /config`
-
-Gets the full application configuration.
-
-**Response:**
-Complete configuration object.
-
-#### `GET /config/{section}`
-
-Gets a specific section of the configuration.
-
-**Response:**
-```json
-{
-  "values": object,
-  "description": "string" (optional)
-}
-```
-
-#### `POST /config/update`
-
-Updates a specific configuration value.
-
-**Request Body:**
-```json
-{
-  "path": "string",
-  "value": any
-}
-```
-
-**Response:**
-Updated configuration object.
-
-#### `POST /config/reload`
-
-Reloads the configuration from disk.
-
-**Response:**
-Reloaded configuration object.
-
-### Metrics API
-
-#### `GET /metrics`
-
-Gets all system and LLM metrics.
-
-**Query Parameters:**
-- `include_history` (boolean, default: false): Whether to include historical metrics
-
-**Response:**
-```json
-{
-  "system": {
-    "cpu_percent": float,
-    "cpu_temperature": float,
-    "memory_percent": float,
-    "memory_used_mb": float,
-    "memory_temperature": float,
-    "gpu_percent": float,
-    "gpu_fans_rpm": float,
-    "gpu_watt": float,
-    "vram_percent": float,
-    "vram_used_mb": float,
-    "system_uptime_seconds": float,
-    "app_uptime_seconds": float
-  },
-  "llm": {
-    "total_requests": integer,
-    "total_tokens_generated": integer,
-    "cache_hits": integer,
-    "cache_misses": integer,
-    "avg_tokens_per_second": float,
-    "avg_response_time_ms": float
-  },
-  "tokens_per_second_history": array (if include_history is true),
-  "response_times_history": array (if include_history is true)
-}
-```
-
-#### `GET /metrics/system`
-
-Gets system metrics only.
-
-**Response:**
-System metrics object.
-
-#### `GET /metrics/llm`
-
-Gets LLM metrics only.
-
-**Response:**
-LLM metrics object.
 
 ## Error Responses
 

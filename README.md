@@ -4,7 +4,7 @@ Solo is a local-first voice assistant that combines speech recognition, text-to-
 
 ## Key Features
 
-- **Local-First Architecture**: Privacy-focused design that keeps data and processing on your device
+- **Local-First Architecture**: Privacy-focused design that keeps data and processing on the device
 - **Modern LLM Integration**: Seamless support for various GGUF models (Mistral, Llama, Phi, Mixtral)
 - **Event-Driven Design**: Asynchronous communication between components for responsive performance
 - **API-First Approach**: Comprehensive RESTful API for easy integration with other systems
@@ -27,10 +27,10 @@ Solo is a local-first voice assistant that combines speech recognition, text-to-
 5. For database functionality, install Docker and Docker Compose.
 6. Create a `.env` file with database credentials (see `.env.example`).
 7. Start the PostgreSQL database with `docker-compose up -d db`.
-8. Start the assistant with `pwsh scripts/run_agent.ps1` or run `python app/main.py` directly.
+8. Start the assistant with `python -m app.main`.
 
 ## Development
-- Use the interactive LLM tester to try out prompts: `python -m app.main`
+- Use the interactive LLM tester: `python -m app.core.llm_tester`
 - For a simpler demo: `python -m app.core.llm_demo --model "[model_path]" --interactive`
 - To list and inspect available models: `python -m app.core.model_info --verbose`
 - To back up the database: `pwsh scripts/db/backup-db.ps1`

@@ -263,11 +263,13 @@ CREATE INDEX IF NOT EXISTS idx_security_events_timestamp ON security.security_ev
 
 ## Database Migration Strategy
 
-For managing database migrations, we'll use Alembic with SQLAlchemy. This allows:
+For managing database migrations, the Solo project plans to use Alembic with SQLAlchemy. This will allow:
 
 1. Version-controlled schema changes
 2. Forward and backward migrations
 3. Automated schema updates during deployment
+
+Currently, the database schema is defined in SQL scripts in the `scripts/postgresql/init-scripts/` directory, with plans to transition to Alembic migrations as the project matures.
 
 ## Partitioning Strategy for Metrics Data
 

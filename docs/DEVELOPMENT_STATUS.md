@@ -29,7 +29,7 @@ This document provides a comprehensive overview of the current implementation st
 | Prompt Templates | ✅ Complete | Model-specific prompt formatting |
 | Response Cache | ✅ Complete | Performance optimization with caching |
 | Database Service | 🔄 Partially Complete | PostgreSQL integration with specialized services |
-| API Layer | 🔄 Partially Complete | FastAPI server with comprehensive endpoints |
+| API Layer | 🔄 Partially Complete | FastAPI server with endpoints for LLM, models, and users |
 | User Management | ✅ Complete | Authentication, authorization, and session tracking |
 | Memory / RAG | ⏳ In Progress | Vector database integration with pgvector |
 | STT | 🔜 Planned | Real-time transcription using faster-whisper |
@@ -111,6 +111,12 @@ This document provides a comprehensive overview of the current implementation st
    - Document chunking and processing pipeline
    - Context injection for enhanced responses
 
+2. **Dashboard UI**
+   - Initial Streamlit implementation
+   - Basic system metrics visualization
+   - Model management interface
+   - Conversation history viewer
+
 #### Planned Features
 
 1. **Speech Components**
@@ -125,20 +131,14 @@ This document provides a comprehensive overview of the current implementation st
    - Tool usage and reasoning capabilities
    - Agent collaboration and communication
 
-3. **Dashboard UI**
-   - Streamlit application for metrics visualization
-   - Real-time system monitoring
-   - Conversation history and management
-   - Configuration interface
-
 ## Next Development Focus
 
 The current development focus is on:
 
-1. Setting up a basic Dashboard UI
-2. Completing the Memory/RAG integration
-3. Implementing unit and integration tests for all components
-4. Enhancing API documentation and examples
+1. Completing the Memory/RAG integration
+2. Implementing the Dashboard UI
+3. Enhancing API documentation and examples
+4. Expanding test coverage across components
 5. Preparing for STT/TTS integration
 
 ## Contributing

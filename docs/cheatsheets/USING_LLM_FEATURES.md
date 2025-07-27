@@ -8,7 +8,7 @@ The ModelManager automatically discovers and manages GGUF models in the `models/
 
 ### Available Models
 
-To see what models are available on this system:
+To see what models are available on the system:
 
 ```bash
 python -m app.core.model_info --verbose
@@ -64,7 +64,7 @@ Solo caches responses to avoid redundant computation, especially for common quer
 
 ### Cache Management
 
-Cache is automatically managed, but you can:
+Cache is automatically managed, but it's possible to:
 
 1. **Clear the cache**:
 ```bash

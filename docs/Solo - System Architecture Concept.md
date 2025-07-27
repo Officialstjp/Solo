@@ -183,10 +183,13 @@ The Agent Bus will orchestrate multiple AI agents:
 
 ### 3.2 Event Types & Communication Patterns
 
-- **STTEvent**: Speech transcription result
 - **LLMRequestEvent**: Request for text generation
 - **LLMResponseEvent**: Generated text response
-- **TTSRequestEvent**: Request for speech synthesis
+- **ModelLoadRequestEvent**: Request to load a specific model
+- **ModelLoadedEvent**: Notification that a model has been loaded
+- **SessionClearEvent**: Request to clear a session's history
+- **TTSRequestEvent**: Request for speech synthesis (planned)
+- **STTEvent**: Speech transcription result (planned)
 - **MetricsEvent**: System and performance metrics
 
 Components subscribe to relevant event types and process them asynchronously, publishing new events as needed.
@@ -286,6 +289,6 @@ Planned architectural extensions include:
 - **Plugin System**: Extensibility through standardized plugins
 
 Total time spent on this project (inlucding doc-work):
- -  **136h**
+ -  **156h**
 
-last updated 20.07.25 22:30, daily time at time of note: 11:00
+last updated 27.07.25 13:30, daily time at time of note: 1:30
