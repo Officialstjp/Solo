@@ -12,7 +12,46 @@ import uuid
 from app.utils.logger import get_logger
 from app.utils.events import EventBus, EventType, ModelLoadRequestEvent, ModelLoadedEvent, ModelUnloadedEvent
 from app.core.model_manager import ModelManager
-from app.core.llm_runner import LlamaModel
+from app.core.llm_service import LlamaModel
+
+class ModelFormat(str, Enum):
+    """Known model formats with their prompt templates"""
+    MISTRAL = "mistral"
+    MISTRAL_INSTRUCT = "mistral-instruct"
+    LLAMA2 = "llama2"
+    LLAMA3 = "llama3"
+    TINYLLAMA = "tinyllama"
+    PHI = "phi"
+    PHI2 = "phi2"
+    PHI3 = "phi3"
+    PHI4 = "phi4"
+    MIXTRAL = "mixtral"
+    UNCATEGORIZED = "uncategorized"
+
+@dataclass
+class ModelInfo:
+    """Information about a specific model"""
+    path: str
+    name: str
+    format: ModelFormat
+    context_length: int
+    quantization: str
+    parameter_size: str
+    supported_features: List[str]
+    metadata: Dict[str, Any]
+
+    @property
+    def file_size_mb(self) -> float:
+        """Get the file size in MB"""
+        try:
+            return os.path.getsize(self.path) / (1024 * 1024)
+        except (FileNotFoundError, OSError):
+            return 0.0
+
+    @property
+    def short_description(self) -> str:
+        """Get a short description of the model"""
+        return f"{self.name} ({self.parameter_size}, {self.quantization}, {self.file_size_mb:.1f}MB)"
 
 class ModelService:
     """

@@ -4,7 +4,7 @@ Purpose   : Tests for the application configuration.
 Params    : None
 History   :
     Date          Notes
-    07.26.2025    Initial creation.
+    26.07.2025    Initial creation.
 """
 import os
 from app.config import AppConfig, get_config

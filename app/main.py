@@ -17,12 +17,12 @@ import os
 from pathlib import Path
 import uvicorn
 
-from app.core.llm_runner import llm_runner_component
+from app.utils.logger import get_logger
+from app.core.llm_service import llm_runner_component
 from app.core.llm_tester import llm_tester_component
 from app.core.model_manager import ModelManager
 from app.core.prompt_templates import PromptLibrary
 from app.core.db_service import DatabaseService
-from app.utils.logger import get_logger
 from app.utils.events import EventBus, EventType
 from app.config import AppConfig
 
@@ -33,11 +33,15 @@ class SoloApp:
         """ Initialize application """
         self.config = AppConfig(config_path)
 
+        # Explicitly set log file for all loggers
+        default_log_file = os.path.join("logs", "solo.log")
+        self.config.log_file = default_log_file
+
         # Setup logger
-        self.logger = get_logger(name = "main",
+        self.logger = get_logger(
+            name="main",
             log_level=self.config.log_level,
-            json_format=self.config.json_logs,
-            log_file=self.config.log_file
+            json_format=self.config.json_logs
         )
 
         # Initialize model manager
@@ -282,7 +286,7 @@ async def main():
     )
 
     # Create and register the model service
-    from app.core.model_service import ModelService
+    from app.core.llm_service import ModelService
 
     model_service = ModelService(
         event_bus=app.event_bus,

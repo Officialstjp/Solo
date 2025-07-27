@@ -16,7 +16,6 @@ from app.utils.events import EventBus
 from app.utils.logger import get_logger
 from app.config import get_config
 from app.core.model_manager import ModelManager
-from app.core.model_service import ModelService
 from app.core.prompt_templates import PromptLibrary
 from app.core.db_service import DatabaseService
 from app.api.middleware import auth_middleware
@@ -91,13 +90,7 @@ def create_app(
     # Use existing model service if provided, otherwise create a new one
     model_service = existing_model_service
     if not model_service:
-        logger.warning("No existing model service provided, creating a new one")
-        model_service = ModelService(
-            event_bus=event_bus,
-            model_manager=model_manager,
-            default_model_id=default_model_id,
-            max_models=config.llm.max_loaded_models if hasattr(config.llm, 'max_loaded_models') else 2
-        )
+        logger.warning("No existing model service provided, features requiring model service may not work")
 
     # Store application state
     app.state.config = config
@@ -110,10 +103,10 @@ def create_app(
         "total_requests": 0,
         "total_tokens_generated": 0,
         "cache_hits": 0,
-        "cache_misses": [],
+        "cache_misses": 0,  # Changed from array to integer to match usage in llm_endpoint.py
         "tokens_per_second": [],
         "response_times": []
-    },
+    }
     app.state.db_service = db_service
 
     # Register startup and shutdown events

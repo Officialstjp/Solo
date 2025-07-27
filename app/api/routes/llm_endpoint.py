@@ -18,7 +18,7 @@ import json
 
 from app.utils.events import EventBus, EventType, LLMRequestEvent, LLMResponseEvent, ModelLoadRequestEvent, ModelLoadedEvent, SessionClearEvent
 from app.core.model_manager import ModelManager
-from app.core.model_service import ModelService
+from app.core.llm_service import ModelService
 from app.core.prompt_templates import PromptLibrary
 from app.core.db_service import DatabaseService
 from app.core.db.users_db import MessageCreate, ConversationCreate

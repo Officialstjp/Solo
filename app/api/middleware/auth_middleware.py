@@ -47,7 +47,9 @@ class AuthMiddleware:
         self.exclude_prefixes = exclude_prefixes or [
             #"/static/",
             #"/metrics/", # Exclude metrics endpoint - can be secured separately
-            #"/auth/"     # Allow all authentication-related endpoints
+            #"/auth/",     # Allow all authentication-related endpoints
+            "/test/",  # Allow test endpoints for development
+            "/llm/generate"  # allow the llm/generate endpoint
         ]
         logger.info("Auth middleware initialized")
 

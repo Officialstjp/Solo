@@ -14,7 +14,7 @@ import sys
 import os
 from pathlib import Path
 
-from app.core.llm_runner import LlamaModel
+from app.core.llm_service import LlamaModel
 from app.core.model_manager import ModelManager
 from app.core.prompt_templates import PromptLibrary
 from app.utils.logger import get_logger

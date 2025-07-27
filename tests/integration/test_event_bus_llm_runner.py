@@ -4,14 +4,14 @@ Purpose   : Integration tests for the event bus and LLM runner functionality.
 Params    : None
 History   :
     Date          Notes
-    07.26.2025    Init
+    26.07.2025    Init
 """
 import asyncio
 import logging
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from app.core.llm_runner import llm_runner_component, LLMRunner
+from app.core.llm_service import llm_runner_component, LLMRunner
 from app.utils.events import EventBus, LLMRequestEvent
 
 # Mark all tests in this file as asyncio
@@ -44,7 +44,7 @@ async def test_llm_runner_recieves_event(caplog):
         chat_history=[],
     )
 
-    with patch("app.core.llm_runner.LLMRunner._process_llm_request", new=mock_process_llm_request):
+    with patch("app.core.llm_service.LLMRunner._process_llm_request", new=mock_process_llm_request):
         runner_task = asyncio.create_task(
             llm_runner_component(
                 event_bus=event_bus,

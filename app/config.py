@@ -18,7 +18,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-logger = get_logger("main")
+logger = get_logger("config", log_file=os.environ.get("SOLO_LOG_FILE"))
 
 _config_instance = None
 

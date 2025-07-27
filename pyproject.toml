@@ -25,6 +25,7 @@ aioconsole = "^0.8.1"
 asyncpg = "^0.29.0"
 argon2-cffi = "^23.1.0"                                 # For password hashing
 pyotp = "^2.9.0"                                        # MFA
+httpx = "^0.27.0"
 
 [tool.poetry.group.dev.dependencies]                    # - DEV + CI
 black = "^24.4"
