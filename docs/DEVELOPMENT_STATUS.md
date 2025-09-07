@@ -10,12 +10,12 @@ This document provides a comprehensive overview of the current implementation st
 | Early July 2025 | LLM integration and model management completed |
 | Mid July 2025 | Basic API layer and database services implemented |
 | Late July 2025 | Basic User management and authentication completed |
-| Planned Late July 2025 | Basic Dashboard UI and visualization tools |
-| Planned August 2025 | Memory/RAG integration |
-| Planned August 2025 | Voice capabilities (STT/TTS) |
-| Planned September 2025 | Agent Bus and multi-agent workflows |
-| Planned October 2025 | Full Dashboard UI and visualization tools |
-| Planned November 2025 | Beta release |
+| On-Hold | Basic Dashboard UI and visualization tools |
+| On-Hold | Memory/RAG integration |
+| On-Hold | Voice capabilities (STT/TTS) |
+| On-Hold | Agent Bus and multi-agent workflows |
+| On-Hold | Full Dashboard UI and visualization tools |
+| On-Hold | Beta release |
 
 ## Component Status Overview
 
@@ -27,15 +27,15 @@ This document provides a comprehensive overview of the current implementation st
 | LLM Runner | ✅ Complete | llama.cpp integration with GPU acceleration |
 | Model Manager | ✅ Complete | Dynamic model detection and selection |
 | Prompt Templates | ✅ Complete | Model-specific prompt formatting |
-| Response Cache | ✅ Complete | Performance optimization with caching |
-| Database Service | 🔄 Partially Complete | PostgreSQL integration with specialized services |
-| API Layer | 🔄 Partially Complete | FastAPI server with endpoints for LLM, models, and users |
 | User Management | ✅ Complete | Authentication, authorization, and session tracking |
-| Memory / RAG | ⏳ In Progress | Vector database integration with pgvector |
-| STT | 🔜 Planned | Real-time transcription using faster-whisper |
-| TTS | 🔜 Planned | Voice output powered by Piper |
-| Agent Bus | 🔜 Planned | CrewAI orchestration for multi-agent workflows |
-| Dashboard UI | 🔜 Planned | Streamlit metrics display |
+| API Layer | 🔄 Partially Complete | FastAPI server with endpoints for LLM, models, and users |
+| Response Cache | 🔄 Partially Complete | Performance optimization with caching |
+| Database Service | 🔄 Partially Complete | PostgreSQL integration with specialized services |
+| Memory / RAG | ⏳ On-Hold | Vector database integration with pgvector |
+| STT | ⏳ On-Hold | Real-time transcription using faster-whisper |
+| TTS | ⏳ On-Hold | Voice output powered by Piper |
+| Agent Bus | ⏳ On-Hold | CrewAI orchestration for multi-agent workflows |
+| Dashboard UI | ⏳ On-Hold | Streamlit metrics display |
 
 ### Detailed Implementation Status
 
@@ -64,45 +64,39 @@ This document provides a comprehensive overview of the current implementation st
    - Chat history formatting and context management
    - Response sanitization for clean outputs
 
-5. **Response Caching**
-   - In-memory LRU cache for frequent queries
-   - File-based persistence with JSON serialization
-   - TTL-based expiration policy
-   - Cache management utilities for clearing and refreshing
-
-6. **Configuration System**
+5. **Configuration System**
    - Pydantic models for configuration validation
    - Environment variable support
    - Command-line parameter overrides
    - Sensible defaults for quick setup
 
-7. **Database Integration**
+6. **Database Integration**
    - PostgreSQL with time-based partitioning
    - Migration system for schema updates
    - Connection pooling for efficient resource usage
    - Transaction management and error handling
 
-8. **Security Services**
+7. **Security Services**
    - Argon2 password hashing
    - JWT-based authentication
    - Role-based access control
    - Password policy enforcement
    - Session management
 
-9. **API Layer**
+8. **API Layer**
    - FastAPI server with OpenAPI documentation
    - Endpoint routes for all core services
    - Authentication middleware
    - Rate limiting and request validation
    - Error handling and standardized responses
 
-10. **Testing Infrastructure**
+9. **Testing Infrastructure**
     - Pytest framework for unit and integration tests
     - Test utilities for API endpoint validation
     - Database testing with transactions
     - Mocking framework for external dependencies
 
-#### Features In Progress
+#### Features In Progress (On-Hold)
 
 1. **Memory and RAG Integration**
    - pgvector extension for PostgreSQL vector storage
@@ -117,7 +111,7 @@ This document provides a comprehensive overview of the current implementation st
    - Model management interface
    - Conversation history viewer
 
-#### Planned Features
+#### Planned Features (On-Hold)
 
 1. **Speech Components**
    - STT using faster-whisper for real-time transcription
