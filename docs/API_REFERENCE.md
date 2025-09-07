@@ -2,7 +2,9 @@
 
 ## Overview
 
-The Solo API provides programmatic access to the Solo AI Assistant's functionality, including LLM interactions, model management, user management, and system metrics. This document details all available endpoints, their parameters, and response structures.
+The Solo API provides programmatic access to the Solo AI Assistant's functionality, including LLM interactions, model management, user management, and system metrics. This document details available endpoints, their parameters, and response structures.
+
+Note: Not all Endpoints listed are functional. Further Development is on-hold.
 
 ## Base URL
 
