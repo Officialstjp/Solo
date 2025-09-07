@@ -3,7 +3,7 @@
 Solo is a (planned) local-first voice assistant that combines speech recognition, text-to-speech and a lightweight large language model. The application is organised as a set of micro‑services under the `app/` folder with `main.py` acting as an async supervisor. A FastAPI server exposes REST and WebSocket endpoints while a Streamlit dashboard provides runtime metrics.
 
 This project's purpose is learning to and actually designing a server-based application up to modern standard.
-Development for this project is currently on hold.
+**Development for this project is currently on hold.**
 
 ## Key Features (currently)
 
