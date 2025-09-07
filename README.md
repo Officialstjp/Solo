@@ -10,7 +10,7 @@ Development for this project is currently on hold.
 - **Local-First Architecture**: Privacy-focused design that keeps data and processing on the device
 - **Modern LLM Integration**: Seamless support for various GGUF models (Mistral, Llama, Phi, Mixtral)
 - **Event-Driven Design**: Asynchronous communication between components for responsive performance
-- **API-First Approach**: Comprehensive RESTful API for easy integration with other systems
+- **API-First Approach**: RESTful API for easy integration with other systems
 - **Database Integration**: PostgreSQL with time-based partitioning for efficient data storage
 - **User Management**: Complete user authentication and session management
 
