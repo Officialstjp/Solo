@@ -125,7 +125,7 @@ The Prompt Template system ensures consistent formatting:
 - Handles chat history formatting
 - Sanitizes responses to remove artifacts
 
-### 2.5 Response Cache
+### 2.5 Response Cache (non-functional)
 
 The Response Cache improves performance and reduces resource usage:
 
@@ -234,17 +234,9 @@ The testing infrastructure includes:
 - API tests for endpoint validation
 - Database tests with transaction rollback
 
-## 8. Deployment Model
+## 8. Design Decisions & Rationale
 
-Solo is designed for flexible deployment:
-
-- **Local-First**: Primary deployment is on the user's local machine
-- **Containerization**: Components can be containerized for cloud deployment
-- **Scaling**: Components can be scaled independently based on load
-
-## 9. Design Decisions & Rationale
-
-### 9.1 Why Event-Driven Architecture?
+### 8.1 Why Event-Driven Architecture?
 
 Event-driven architecture was chosen to:
 - Decouple components for independent development
@@ -252,7 +244,7 @@ Event-driven architecture was chosen to:
 - Allow for flexible scaling of individual components
 - Simplify adding new components without modifying existing ones
 
-### 9.2 Why PostgreSQL?
+### 8.2 Why PostgreSQL?
 
 PostgreSQL was chosen over other databases because:
 - It supports advanced features like time-based partitioning
@@ -261,7 +253,7 @@ PostgreSQL was chosen over other databases because:
 - It provides robust security features
 - It has excellent performance for the expected workload
 
-### 9.3 Why FastAPI?
+### 8.3 Why FastAPI?
 
 FastAPI was selected as the API framework because:
 - It provides native async support for non-blocking operations
@@ -269,7 +261,7 @@ FastAPI was selected as the API framework because:
 - It has built-in request validation with Pydantic
 - It offers excellent performance compared to alternatives
 
-### 9.4 Why llama.cpp?
+### 8.4 Why llama.cpp?
 
 llama.cpp was chosen for LLM integration because:
 - It provides efficient inference on consumer hardware
@@ -278,7 +270,7 @@ llama.cpp was chosen for LLM integration because:
 - It offers flexible generation parameters
 - It has a small footprint and low overhead
 
-## 10. Future Architectural Extensions
+## 9. Future Architectural Extensions
 
 Planned architectural extensions include:
 
@@ -289,6 +281,4 @@ Planned architectural extensions include:
 - **Plugin System**: Extensibility through standardized plugins
 
 Total time spent on this project (inlucding doc-work):
- -  **156h**
-
-last updated 27.07.25 13:30, daily time at time of note: 1:30
+ -  **160h**
