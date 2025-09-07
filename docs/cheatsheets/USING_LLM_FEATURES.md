@@ -134,14 +134,3 @@ response = await llm.generate_response("Tell me a joke")
 print(response)
 ```
 
-## VS Code Tasks
-
-Several VS Code tasks are available to make development easier:
-
-1. **Run Main Application**: Launches the main Solo application
-2. **Run LLM Demo**: Starts the interactive LLM demo
-3. **Show Available Models**: Lists all detected models
-4. **Run LLM Tester**: Starts the interactive LLM tester
-5. **Clear Cache**: Clears the response cache
-
-Access these by pressing `Ctrl+Shift+P` and typing "Tasks: Run Task".
